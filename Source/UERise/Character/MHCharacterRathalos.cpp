@@ -491,7 +491,7 @@ float AMHCharacterRathalos::TakeDamage(float DamageAmount, FDamageEvent const& D
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventIntigator, DamageCauser);
 
-	Stat->ApplyDamage(DamageAmount);
+	//Stat->ApplyDamage(DamageAmount);
 	
 	return DamageAmount;
 }
