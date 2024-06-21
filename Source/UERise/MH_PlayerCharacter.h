@@ -70,7 +70,7 @@ public:
 	bool PressRT;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Key")
-	bool PressLB;
+	bool PressLT;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Key")
 	int32 KeyDirInt;
