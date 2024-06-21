@@ -31,10 +31,6 @@ AMH_PlayerCharacter::AMH_PlayerCharacter()
 	WireBug = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WireBug"));
 	WireBug->SetupAttachment(GetMesh());
 	static ConstructorHelpers::FObjectFinder<USkeletalMesh> WireBugMeshRef(TEXT("/ Script / Engine.SkeletalMesh'/Game/Characters/WireBug/ec008_00_meshout.ec008_00_meshout'"));
-	
-	AGRInventoryComponent = CreateDefaultSubobject<UAGR_InventoryManager>("AGRInventory");
-
-
 
 	if (WireBugMeshRef.Object)
 	{

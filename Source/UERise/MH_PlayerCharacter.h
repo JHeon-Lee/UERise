@@ -6,7 +6,6 @@
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
 #include "Interface/MH_AnimNotifyInterface.h"
-#include "Components/AGR_InventoryManager.h"
 #include "MH_PlayerCharacter.generated.h"
 
 UCLASS()
@@ -174,10 +173,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
 	TObjectPtr<class USkeletalMeshComponent> WireBug;
-	
-
-	UPROPERTY(Category = "AGRPRO", VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess = "true"))
-	UAGR_InventoryManager* AGRInventoryComponent;
 
 protected:
 
