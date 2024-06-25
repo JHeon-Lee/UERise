@@ -314,6 +314,12 @@ AMHCharacterRathalos::AMHCharacterRathalos()
 		AirTailCutMontage = AirTailCutMontageRef.Object;
 	}
 
+	static ConstructorHelpers::FObjectFinder<UAnimMontage> AirFlashHitMontageRef(TEXT("/Script/Engine.AnimMontage'/Game/Animations/DamagedMontages/AM_AirFlashHit.AM_AirFlashHit'"));
+	if (AirFlashHitMontageRef.Object)
+	{
+		AirFlashHitMontage = AirFlashHitMontageRef.Object;
+	}
+
 	static ConstructorHelpers::FObjectFinder<UAnimMontage> StunTrapMontageRef(TEXT("/Script/Engine.AnimMontage'/Game/Animations/DamagedMontages/AM_StunTrapReaction.AM_StunTrapReaction'"));
 	if (StunTrapMontageRef.Object)
 	{
@@ -662,8 +668,8 @@ void AMHCharacterRathalos::SetStun()
 	}
 	else if (GetCharacterMovement()->GetMovementName() == TEXT("Flying"))
 	{
-		AnimInstance->Montage_Play(AirKnockDownMontage, 1.0f);
-		AnimInstance->Montage_SetEndDelegate(EndDelegate, AirKnockDownMontage);
+		AnimInstance->Montage_Play(AirFlashHitMontage, 1.0f);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, AirFlashHitMontage);
 	}
 }
 
