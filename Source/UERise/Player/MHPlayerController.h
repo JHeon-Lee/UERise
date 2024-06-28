@@ -18,19 +18,17 @@ class UERISE_API AMHPlayerController : public APlayerController
 public:
 	AMHPlayerController();
 
-
-protected:
-	virtual void BeginPlay() override;
-
-
-
 //HUD
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HUD)
 	TSubclassOf<class UMHHUDWidget> MHHUDWidgetClass;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = HUD)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = HUD)
 	TObjectPtr<class UMHHUDWidget> MHHUDWidget;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HUD)
+	TSubclassOf<class UMHHUDWidget> MHVillageHUDWidgetClass;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = HUD)
+	TObjectPtr<class UMHHUDWidget> MHVillageHUDWidget;
 };

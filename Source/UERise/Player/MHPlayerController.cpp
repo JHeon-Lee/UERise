@@ -11,15 +11,10 @@ AMHPlayerController::AMHPlayerController()
 	{
 		MHHUDWidgetClass = MHHUDWidgetRef.Class;
 	}
-}
 
-void AMHPlayerController::BeginPlay()
-{
-	Super::BeginPlay();
-
-	MHHUDWidget = CreateWidget<UMHHUDWidget>(this, MHHUDWidgetClass);
-	if (MHHUDWidget)
+	static ConstructorHelpers::FClassFinder<UMHHUDWidget> MHVillageHUDWidgetRef(TEXT("/Game/Characters/Utusi/UI/WBP_MHVillageHUD.WBP_MHVillageHUD_C"));
+	if (MHVillageHUDWidgetRef.Class)
 	{
-		MHHUDWidget->AddToViewport();
+		MHVillageHUDWidgetClass = MHVillageHUDWidgetRef.Class;
 	}
 }
