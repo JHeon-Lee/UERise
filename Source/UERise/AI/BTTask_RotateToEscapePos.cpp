@@ -30,35 +30,36 @@ EBTNodeResult::Type UBTTask_RotateToEscapePos::ExecuteTask(UBehaviorTreeComponen
 
     FVector Origin = ControllingPawn->GetActorLocation();
     FVector ForwardVec = ControllingPawn->GetActorForwardVector();
-    FVector EscapePos = OwnerComp.GetBlackboardComponent()->GetValueAsVector(BBKEY_ESCAPEPOS);
+    FVector TargetPos = OwnerComp.GetBlackboardComponent()->GetValueAsVector(BBKEY_PREESCAPEPOS);
 
-    FAIRathalosEscapeRotateFinished OnEscapeRotateFinished;
-    OnEscapeRotateFinished.BindLambda(
+    AIPawn->StopMontage();
+
+    FAIRathalosRotateFinished OnRotateFinished;
+    OnRotateFinished.BindLambda(
         [&]()
         {
             FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
         }
     );
-    AIPawn->SetAIEscapeRotateDelegate(OnEscapeRotateFinished);
+    AIPawn->SetAIRotateDelegate(OnRotateFinished);
 
-    FVector VectorToTarget = EscapePos - Origin;
+    FVector VectorToTarget = TargetPos - Origin;
     VectorToTarget.Normalize(1.0f);
     float AngleBetweenTarget = acosf(FVector::DotProduct(VectorToTarget, ForwardVec));
     float CrossZ = FVector::CrossProduct(ForwardVec, VectorToTarget).Z;
 
-    FString FloatString = FString::SanitizeFloat(AngleBetweenTarget);
-    UKismetSystemLibrary::PrintString(ControllingPawn->GetWorld(), *FloatString, true, true, FLinearColor::Green, 2.0f);
+    //DrawDebugLine(ControllingPawn->GetWorld(), Origin, TargetPos, FColor::Red, true, 5.0f, 0, 5.0f);
 
     if (CrossZ < 0)
     {
         if (AngleBetweenTarget > 0 && AngleBetweenTarget < (PI / 2))
         {
-            AIPawn->EscapeRotateLeft90AI(1.5 - (AngleBetweenTarget / (PI / 2) * 1.5));
+            AIPawn->RotateLeft90AI(1.5 - (AngleBetweenTarget / (PI / 2) * 1.5));
             return EBTNodeResult::InProgress;
         }
         else if (AngleBetweenTarget > (PI / 2) && AngleBetweenTarget < PI)
         {
-            AIPawn->EscapeRotateLeft180AI(2.3 - (AngleBetweenTarget / PI * 2.1));
+            AIPawn->RotateLeft180AI(2.3 - (AngleBetweenTarget / PI * 2.1));
             return EBTNodeResult::InProgress;
         }
         else
@@ -68,12 +69,12 @@ EBTNodeResult::Type UBTTask_RotateToEscapePos::ExecuteTask(UBehaviorTreeComponen
     {
         if (AngleBetweenTarget > 0 && AngleBetweenTarget < (PI / 2))
         {
-            AIPawn->EscapeRotateRight90AI(1.5 - (AngleBetweenTarget / (PI / 2) * 1.5));
+            AIPawn->RotateRight90AI(1.5 - (AngleBetweenTarget / (PI / 2) * 1.5));
             return EBTNodeResult::InProgress;
         }
         else if (AngleBetweenTarget > (PI / 2) && AngleBetweenTarget < PI)
         {
-            AIPawn->EscapeRotateRight180AI(2.3 - (AngleBetweenTarget / PI * 2.1));
+            AIPawn->RotateRight180AI(2.3 - (AngleBetweenTarget / PI * 2.1));
             return EBTNodeResult::InProgress;
         }
         else

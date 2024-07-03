@@ -29,6 +29,7 @@ void AMHAIController::RunAI()
 	if (UseBlackboard(BBAsset, BlackboardPtr))
 	{
 		Blackboard->SetValueAsVector(BBKEY_POS, FVector(-14050, -49480, -7540));
+		Blackboard->SetValueAsVector(BBKEY_PREESCAPEPOS, FVector(-15840, -33190, -6470));
 		// For Short Range Pattern
 		Blackboard->SetValueAsVector(BBKEY_ATTACKPATTERN1, FVector(0, false, false));
 		Blackboard->SetValueAsVector(BBKEY_ATTACKPATTERN2, FVector(1, false, false));

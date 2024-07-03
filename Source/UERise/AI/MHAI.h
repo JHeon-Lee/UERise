@@ -25,3 +25,4 @@
 #define BBKEY_ESCAPEPOS TEXT("EscapePos")
 #define BBKEY_DESTINATIONCOUNT TEXT("DestinationCount")
 #define BBKEY_POS TEXT("TrgtPos")
+#define BBKEY_PREESCAPEPOS TEXT("PreEscapePos")
