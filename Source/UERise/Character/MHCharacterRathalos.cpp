@@ -510,7 +510,6 @@ void AMHCharacterRathalos::SetDead()
 	if (GetCharacterMovement()->GetMovementName() == TEXT("Walking"))
 	{
 		AnimInstance->Montage_Play(DeadMontage, 1.0f);
-		SetActorEnableCollision(false);
 	}
 	else if (GetCharacterMovement()->GetMovementName() == TEXT("Flying"))
 	{
@@ -531,8 +530,6 @@ void AMHCharacterRathalos::SetCaptured()
 	AnimInstance->Montage_Play(CaptureMontage, 1.0f);
 
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
-
-	SetActorEnableCollision(false);
 
 	AMHAIController* MHAIController = Cast<AMHAIController>(GetController());
 	if (MHAIController)
