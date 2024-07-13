@@ -10,7 +10,8 @@
 제작기간 : 2024/05/11 ~ 2024/07/04
 
 담당파트 : 
-  최원영 - 캐릭터, 동반자, 지형, 시네마틱
-          기술문서 : https://docs.google.com/presentation/d/e/2PACX-1vT5NMrFsxp1oV3Szhr5JxfedwnljU90IhfgM0LLJPvq0cXrP78fBxwWlU2Af1ITz05XzPT_rR-hECyd/pub?start=false&loop=false&delayms=3000&slide=id.g276bff19272_0_0
-  이정헌 - 몬스터, UI, 인벤토리 시스템
-          기술문서 : https://docs.google.com/presentation/d/e/2PACX-1vTp8Ro6h5-0PF0Ez7rZKmLkOudf_HT8uFg3F83-rP_OhJGMZXLw-OQEBj6KdJ0-myvQjL6fKpocKU8O/pub?start=false&loop=false&delayms=3000
+최원영 - 캐릭터, 동반자, 지형, 시네마틱
+기술문서 : https://docs.google.com/presentation/d/e/2PACX-1vT5NMrFsxp1oV3Szhr5JxfedwnljU90IhfgM0LLJPvq0cXrP78fBxwWlU2Af1ITz05XzPT_rR-hECyd/pub?start=false&loop=false&delayms=3000&slide=id.g276bff19272_0_0
+
+이정헌 - 몬스터, UI, 인벤토리 시스템
+기술문서 : https://docs.google.com/presentation/d/e/2PACX-1vTp8Ro6h5-0PF0Ez7rZKmLkOudf_HT8uFg3F83-rP_OhJGMZXLw-OQEBj6KdJ0-myvQjL6fKpocKU8O/pub?start=false&loop=false&delayms=3000
