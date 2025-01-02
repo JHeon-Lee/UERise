@@ -8,8 +8,6 @@
 
 UMHAnimInstancePlayer::UMHAnimInstancePlayer()
 {
-	MovingThreshold = 3.0f;
-	JumpingThreshold = 100.0f;
 }
 
 void UMHAnimInstancePlayer::NativeInitializeAnimation()
@@ -17,6 +15,8 @@ void UMHAnimInstancePlayer::NativeInitializeAnimation()
 	Super::NativeInitializeAnimation();
 
 	Owner = Cast<ACharacter>(GetOwningActor());
+	A_Utusi = Cast<AMH_PlayerCharacter>(GetOwningActor());
+
 	if (Owner)
 	{
 		Movement = Owner->GetCharacterMovement();
@@ -31,14 +31,18 @@ void UMHAnimInstancePlayer::NativeUpdateAnimation(float DeltaSeconds)
 	{
 		Velocity = Movement->Velocity;
 		GroundSpeed = Velocity.Size2D();
-		bIsIdle = GroundSpeed < MovingThreshold;
-		bIsFalling = Movement->IsFalling();
-		bIsJumping = bIsFalling & (Velocity.Z > JumpingThreshold);
+		bFalling = Movement->IsFalling();
+		bOnGround = Movement->IsMovingOnGround();
 	}
 
-	IMHCharacterGetterInterface* CharacterPlayer = Cast<IMHCharacterGetterInterface>(Owner);
-	if (CharacterPlayer)
+//	IMHCharacterGetterInterface* CharacterPlayer = Cast<IMHCharacterGetterInterface>(Owner);
+	if (A_Utusi)
 	{
-		bIsDrawing = CharacterPlayer->GetIsDrawing();
+		bPressWASD = A_Utusi->PressWASD;
+		bPressRB = A_Utusi->PressRB;
+		bPressA = A_Utusi->PressA;
+		bPressY = A_Utusi->PressY;
+		bPressX = A_Utusi->PressX;
+		weaponType = A_Utusi->weaponType;
 	}
 }

@@ -8,6 +8,15 @@
 #include "Interface/MH_AnimNotifyInterface.h"
 #include "MH_PlayerCharacter.generated.h"
 
+UENUM(BlueprintType)
+enum class EWeaponType : uint8
+{
+	Unarmed UMETA(DisplayName = "Unarmed"),
+	Armed UMETA(DisplayName = "Armed"),
+	Riding UMETA(DisplayName = "Riding"),
+	DragonRide UMETA(DisplayName = "DragonRide")
+};
+
 UCLASS()
 class UERISE_API AMH_PlayerCharacter : public ACharacter, public IMH_AnimNotifyInterface
 {
@@ -159,6 +168,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	int32 WireBugStack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enum")
+	EWeaponType weaponType;
 
 protected:
 	// Called when the game starts or when spawned
