@@ -32,7 +32,7 @@ void UMHAnimInstancePlayer::NativeUpdateAnimation(float DeltaSeconds)
 		Velocity = Movement->Velocity;
 		GroundSpeed = Velocity.Size2D();
 		bFalling = Movement->IsFalling();
-		bOnGround = Movement->IsMovingOnGround();
+		bOnGround = Movement->IsMovingOnGround();		
 	}
 
 //	IMHCharacterGetterInterface* CharacterPlayer = Cast<IMHCharacterGetterInterface>(Owner);
@@ -43,6 +43,6 @@ void UMHAnimInstancePlayer::NativeUpdateAnimation(float DeltaSeconds)
 		bPressA = A_Utusi->PressA;
 		bPressY = A_Utusi->PressY;
 		bPressX = A_Utusi->PressX;
-		weaponType = A_Utusi->weaponType;
+		weaponType = A_Utusi->WeaponType;
 	}
 }

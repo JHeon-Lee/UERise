@@ -18,6 +18,8 @@ class UERISE_API UMHAnimInstancePlayer : public UAnimInstance
 public:
 	UMHAnimInstancePlayer();
 
+
+
 protected:
 	virtual void NativeInitializeAnimation() override;
 
@@ -31,6 +33,8 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character)
 	TObjectPtr<class UCharacterMovementComponent> Movement;
+
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Character)
 	FVector Velocity;

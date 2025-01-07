@@ -15,7 +15,6 @@ AMHCharacterMonster::AMHCharacterMonster()
 void AMHCharacterMonster::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
 // Called every frame

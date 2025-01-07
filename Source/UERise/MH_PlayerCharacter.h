@@ -17,6 +17,21 @@ enum class EWeaponType : uint8
 	DragonRide UMETA(DisplayName = "DragonRide")
 };
 
+UENUM(BlueprintType)
+enum class ELevelType : uint8
+{
+	Village UMETA(DisplayName = "Village"),
+	Field UMETA(DisplayName = "Field")
+};
+
+UENUM(BlueprintType)
+enum class EValutMontage : uint8
+{
+	WallRun UMETA(DisplayName = "WallRun"),
+	JumpOver UMETA(DisplayName = "JumpOver"),
+	Vault UMETA(DisplayName = "Vault")
+};
+
 UCLASS()
 class UERISE_API AMH_PlayerCharacter : public ACharacter, public IMH_AnimNotifyInterface
 {
@@ -26,9 +41,101 @@ public:
 	// Sets default values for this character's properties
 	AMH_PlayerCharacter();
 
-	virtual void PostInitializeComponents() override;
+private:
+	void ComponentAttach();
+	void InputSystemSetting();
 
 public:
+	virtual void PostInitializeComponents() override;
+	virtual void BeginPlay() override;
+
+public:
+	void URotate(const FInputActionValue& Value);
+	void ULook(const FInputActionValue& Value);
+
+	// 버튼으로 시작되는 몽타주 재생
+	void ComboStartA();
+	void ComboStartY();
+	void ComboStartRT();
+	void ComboStartB();
+
+	//Bool On/Off
+	void PressAOff() { PressA = false; }
+	void PressBOff() { PressB = false; }
+	void PressXOff() { PressX = false; }
+	void PressYOff() { PressY = false; }
+	void PressRBOff() { PressRB = false; }
+	void PressRTOff() { PressRT = false; }
+	void PressLTOff() { PressLT = false; }
+	void PressWASDOff() { PressWASD = false; ActionValue = FVector2D(0.0, 0.0); }
+
+	void PressBOn() { PressB = true; }
+	void PressXOn() { PressX = true; }
+	void PressYOn() { PressY = true; }
+	void PressRBOn() { PressRB = true; }
+	void PressRTOn() { PressRT = true; }
+	void PressLTOn() { PressLT = true; }
+
+
+
+public:
+// Called every frame
+	virtual void Tick(float DeltaTime) override;
+	void KeyPressCheck();
+
+	// Valut
+	void ValutCheck();
+		void GetFrontObjectLocation();
+		void GetObjectDimension();
+		void PlayValutMontatge();
+
+
+
+	// Called to bind functionality to input
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
+
+//Interface Override
+	virtual void SwdAttachToSocket(FName socketName) override;
+
+	virtual void ManualMoveBegin() override;
+	virtual void ManualMoveTick(float ManualMoveSpeed, float ManualMoveZSpeed, float FlymodeTime, bool WallRun) override;
+	virtual void ManualMoveEnd() override;
+
+	virtual void ShootWirebugBegin(FName SocketName) override;
+	virtual void ShootWirebugTick(float Distance, float ZDistance, float FDistance, float Movetime) override;
+	virtual void ShootWirebugEnd() override;
+
+	virtual void ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, bool IsChargeAtk, FName SectionName) override;
+
+	virtual void AttackBegin() override;
+	virtual void AttackTick() override;
+	virtual void AttackEnd() override;
+
+//
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void ChargeStopped();
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void ANS_Attack();
+
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<class APostProcessVolume> PostProcessVolumeRef;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<class UMaterialInstanceDynamic> PostProcessMaterialRef;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<class UMaterialInstanceDynamic> OverlayMaterialRef;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<class APawn> NearPawnRef;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<class AActor> NearPropRef;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
 	float TargetRotation;
 
@@ -111,16 +218,10 @@ public:
 	bool NeedZVector;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-	float ManualMoveSpeed;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-	float ManualMoveZSpeed;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-	float ANSTimer;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	float InitialZ;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
+	FVector InitialPosition;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	float CurrentTrgtZ;
@@ -169,25 +270,44 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	int32 WireBugStack;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
+	uint8 CurWireBugStack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
+	float ANSTimer;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enum")
-	EWeaponType weaponType;
+	EWeaponType WeaponType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enum")
+	ELevelType LevelType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
+	TMap<FName,TObjectPtr<class UAnimMontage>> ComboStartMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
+	TMap<FName, TObjectPtr<class UAnimMontage>> PropGetMontages;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
+	TMap<EValutMontage, TObjectPtr<class UAnimMontage>> VaultMontages;	
 
 protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
 
+// Component Attach
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USpringArmComponent> CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UCameraComponent> FollowCamera;
 
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
 	TObjectPtr<class USkeletalMeshComponent> WireBug;
 
-protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMeshComponent> Gswd;
 
+// Input
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputMappingContext> UtusiMappingContext;
 
@@ -204,33 +324,19 @@ protected:
 	TObjectPtr<class UInputAction> IA_Y;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> IA_RB;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> IA_RT;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> IA_LT;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_Move;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_Look;	
 
-public:
-	void URotate(const FInputActionValue& Value);
-	void ULook(const FInputActionValue& Value);
-
-
-public:	
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
-
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-
-	//Notify Section
-	virtual void NotifyBegin() override;
-	virtual void NotifyTick() override;
-	virtual void NotifyEnd() override;
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void ChargeStopped();
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void ANS_Attack();
 
 };
