@@ -109,8 +109,10 @@ public:
 	virtual void ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, bool IsChargeAtk, FName SectionName) override;
 
 	virtual void AttackBegin() override;
-	virtual void AttackTick() override;
+	virtual void AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius) override;
 	virtual void AttackEnd() override;
+
+	void SwitchAtkMode();
 
 //
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
@@ -290,6 +292,12 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
 	TMap<EValutMontage, TObjectPtr<class UAnimMontage>> VaultMontages;	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
+	TArray<TObjectPtr<class UAnimMontage>> RollMontages;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
+	TArray<TObjectPtr<class UAnimMontage>> SpecialMoveMontages;
 
 protected:
 

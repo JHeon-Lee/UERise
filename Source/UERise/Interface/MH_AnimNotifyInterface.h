@@ -62,7 +62,7 @@ public:
 	virtual void ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, bool IsChargeAtk, FName SectionName) = 0;
 
 	virtual void AttackBegin() = 0;
-	virtual void AttackTick() = 0;
+	virtual void AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius) = 0;
 	virtual void AttackEnd() = 0;
 
 

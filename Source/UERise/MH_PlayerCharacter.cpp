@@ -14,6 +14,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/PostProcessVolume.h"
+#include "Engine/DataTable.h"
 #include "UI/UtusiHPBarWidget.h"
 #include "UI/MHWidgetComponent.h"
 
@@ -362,14 +363,14 @@ void AMH_PlayerCharacter::GetFrontObjectLocation()
 		TraceResult, 
 		true
 	);
-
+	
 	KeyArray[18] = TraceResult.bBlockingHit;
 	KeyArray[19] = !TraceResult.bBlockingHit;
 
 	if (TraceResult.bBlockingHit)
 	{
 		ImpactNormal		= TraceResult.ImpactNormal;
-		WallRotZ			= TraceResult.ImpactNormal.ToOrientationRotator().Yaw + 90.0f;
+		WallRotZ			= TraceResult.ImpactNormal.ToOrientationRotator().Yaw +90.0f;
 		WallSlope			= UKismetMathLibrary::DegAcos(FVector::DotProduct(TraceResult.ImpactNormal, GetActorUpVector()));
 		InitialImpactPoint  = TraceResult.ImpactPoint;
 		DistanceToWall		= FVector::Distance(GetActorLocation(), InitialImpactPoint);
@@ -517,8 +518,9 @@ void AMH_PlayerCharacter::ManualMoveTick(float ManualMoveSpeed, float ManualMove
 			SetActorLocation(HitPoint);
 
 			FVector RotVector = FVector(ImpactNormal.X, ImpactNormal.Y, 0.0);			
-			RotVector = FRotator(0.0, 0.0, 90.0).RotateVector(RotVector);
-			SetActorRotation(RotVector.ToOrientationRotator());			
+			FRotator Rot = RotVector.ToOrientationRotator();
+			Rot.Yaw += 90.0f;
+			SetActorRotation(Rot);			
 		}
 	}
 	// 상승 시간 이후에는 자유 낙하 (무중력 상태 해제)
@@ -567,30 +569,105 @@ void AMH_PlayerCharacter::ShootWirebugEnd()
 
 void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, bool IsChargeAtk, FName SectionName)
 {
-	uint8 ArrayIndex = 0;
+	int32 ArrayIndex = 0;
+	UAnimMontage* ComboMontage = nullptr;
 
-	for (; KeyArray.Num(); ArrayIndex++)
+	if (MontageMap.IsEmpty())
 	{
-		if (KeyArray[ArrayIndex])
+		return;
+	}
+
+	for (; ArrayIndex < KeyArray.Num(); ArrayIndex++)
+	{
+		if (!KeyArray[ArrayIndex])
 		{
-			UAnimMontage* ComboMontage = MontageMap.Find((EKeyInfo)ArrayIndex)->Get(); 
-			if (IsValid(ComboMontage))
-			{
+			continue;
+		}
 
-			}
+		uint8 index = UKismetMathLibrary::Conv_IntToByte(ArrayIndex);
+		EKeyInfo key = (EKeyInfo)index;
 
+		if (MontageMap.Contains(key))
+		{
+			ComboMontage = MontageMap[key];
+			break;
 		}
 	}
+
+	if (IsChargeAtk)
+	{
+		ChargeStopped();
+	}
+
+	if (ArrayIndex == (uint8)EKeyInfo::Space && WeaponType == EWeaponType::Armed)
+	{
+		PlayAnimMontage(RollMontages[KeyDirInt]);
+		return;
+	}
+	
+	if(ComboMontage == SpecialMoveMontages[0])
+	{
+		PlayAnimMontage(SpecialMoveMontages[KeyDirInt]);
+		return;
+	}
+
+
+	PlayAnimMontage(ComboMontage);
+
+	if (!SectionName.IsNone())
+	{
+		GetMesh()->GetAnimInstance()->Montage_JumpToSection(SectionName);
+	}
+	
 }
 
 void AMH_PlayerCharacter::AttackBegin()
 {
+	AtkOncePerMonta = false;
 }
 
-void AMH_PlayerCharacter::AttackTick()
+void AMH_PlayerCharacter::AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius)
 {
+	FVector TraceStartLocation = GetMesh()->GetSocketLocation(AtkStartSocket);
+	FVector TraceEndLocation = GetMesh()->GetSocketLocation(AtkEndSocket);
+
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypeArray;
+	ObjectTypeArray.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_PhysicsBody));
+	ObjectTypeArray.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Vehicle));
+
+	TArray<TObjectPtr<AActor>> IgnoreActors;
+	FHitResult TraceResult;
+
+	UKismetSystemLibrary::SphereTraceSingleForObjects(
+		GetWorld(),
+		TraceStartLocation,
+		TraceEndLocation,
+		AtkRadius,
+		ObjectTypeArray,
+		false,
+		IgnoreActors,
+		EDrawDebugTrace::None,
+		TraceResult,
+		true
+	);
+
+	if (!TraceResult.bBlockingHit)
+	{
+		return;
+	}
+
+	AtkOncePerMonta = true;
+	SwitchAtkMode();
+
+
+
+
 }
 
 void AMH_PlayerCharacter::AttackEnd()
+{
+}
+
+void AMH_PlayerCharacter::SwitchAtkMode()
 {
 }
