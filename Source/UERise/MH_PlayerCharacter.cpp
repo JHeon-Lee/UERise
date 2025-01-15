@@ -9,6 +9,8 @@
 #include "CharacterStat/UtusiStatComponent.h"
 #include "Animation/MHAnimInstancePlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/DamageType.h"
+#include "GameData/MH_GlobalDamageType.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -17,6 +19,15 @@
 #include "Engine/DataTable.h"
 #include "UI/UtusiHPBarWidget.h"
 #include "UI/MHWidgetComponent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Particles/ParticleSystemComponent.h"
+#include "Particles/ParticleSystem.h"
+#include "Components/TimelineComponent.h"
+#include "Character/Component/MH_PlayerStatComponent.h"
+#include "GameData/MHPlayerAttackData.h"
+#include "LegacyCameraShake.h"
+
+//F:\UE_5.1\UE_5.1\Engine\Source\Runtime\Engine\Classes\Particles\ParticleSystemComponent.h
 
 // Sets default values
 AMH_PlayerCharacter::AMH_PlayerCharacter()
@@ -26,6 +37,45 @@ AMH_PlayerCharacter::AMH_PlayerCharacter()
 	ComponentAttach();
 	InputSystemSetting();
 	
+	static ConstructorHelpers::FObjectFinder<UDataTable> DataTable(TEXT("/Script/Engine.DataTable'/Game/Characters/Utusi/Data/PlayerGSwdAttackDataTable.PlayerGSwdAttackDataTable'"));
+	if (DataTable.Object != nullptr)
+	{
+		GSwdAttackDataTableRef = DataTable.Object;
+	}
+
+	// Stat Component
+	StatComponent = CreateDefaultSubobject<UMH_PlayerStatComponent>(TEXT("StatComponent"));
+
+	// WidgetComponent
+	PlayerWidgetComponent = CreateDefaultSubobject<UMHWidgetComponent>(TEXT("Widget"));
+	PlayerWidgetComponent->SetupAttachment(GetMesh());
+	PlayerWidgetComponent->SetRelativeLocation(FVector(0, 0, 180));
+	static ConstructorHelpers::FClassFinder<UUtusiHPBarWidget> HpBarWidgetRef(TEXT("/Game/Characters/Utusi/UI/WBP_HpProgressBar.WBP_HpProgressBar_C"));
+	if (HpBarWidgetRef.Class)
+	{
+		PlayerWidgetComponent->SetWidgetClass(HpBarWidgetRef.Class);
+		PlayerWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+		PlayerWidgetComponent->SetDrawSize(FVector2D(150.0f, 15.0f));
+		PlayerWidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		UE_LOG(LogTemp, Log, TEXT("PlayerWidgetComponent Construct Success"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("PlayerWidgetComponent Construct Failed"));
+	}
+
+	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Script/Engine.CurveFloat'/Game/Characters/Utusi/Data/OpacityFloat.OpacityFloat'"));
+	if (Curve.Object)
+	{
+		OpacityCurve = Curve.Object;
+	}
+
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> OverlayMaterial(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/armorTest/BodyGlareMatInst.BodyGlareMatInst'"));
+	if (OverlayMaterial.Object)
+	{
+		OverlayMaterialInstanceRef = OverlayMaterial.Object;
+	}
+
 }
 
 void AMH_PlayerCharacter::ComponentAttach()
@@ -58,6 +108,17 @@ void AMH_PlayerCharacter::ComponentAttach()
 		Gswd->SetSkeletalMesh(GswdMeshRef.Object);
 	}
 
+	BodyFlameEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BodyFlameEffect"));
+	BodyFlameEffect->SetupAttachment(GetMesh());
+
+	BuffEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BuffEffect"));
+	BodyFlameEffect->SetupAttachment(GetMesh(), TEXT("R_Grip_00"));
+
+	BugEffect = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("BugEffect"));
+	BugEffect->SetupAttachment(WireBug);
+
+	SwdFlameEffect = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("SwdFlameEffect"));
+	SwdFlameEffect->SetupAttachment(Gswd);
 }
 
 void AMH_PlayerCharacter::InputSystemSetting()
@@ -136,17 +197,24 @@ void AMH_PlayerCharacter::PostInitializeComponents()
 void AMH_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	UE_LOG(LogTemp, Log, TEXT("PlayerBeginPlay Called"));
 	
 	APlayerController* PlayerController = CastChecked<APlayerController>(GetController());
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 	{
 		Subsystem->AddMappingContext(UtusiMappingContext, 0);
+	}	
+
+	if (OverlayMaterialInstanceRef)
+	{
+		OverlayMaterialDynamicInstance =UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), OverlayMaterialInstanceRef);
+		Gswd->SetOverlayMaterial(OverlayMaterialDynamicInstance);
 	}
 
-	if (OverlayMaterialRef)
-	{
-		Gswd->SetOverlayMaterial(OverlayMaterialRef);
-	}
+	FOnTimelineFloat GSwdOverlayMaterialOpacity;
+	GSwdOverlayMaterialOpacity.BindUFunction(this, FName("OpacityUpdate"));
+	OpacityFloatTimeline.AddInterpFloat(OpacityCurve, GSwdOverlayMaterialOpacity);
+
 }
 
 void AMH_PlayerCharacter::URotate(const FInputActionValue& Value)
@@ -277,6 +345,9 @@ void AMH_PlayerCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	KeyPressCheck();
 	ValutCheck();
+	MakeFalling();
+
+	OpacityFloatTimeline.TickTimeline(DeltaTime);
 }
 
 void AMH_PlayerCharacter::KeyPressCheck()
@@ -303,7 +374,7 @@ void AMH_PlayerCharacter::KeyPressCheck()
 	KeyArray[12] = WeaponType == EWeaponType::Unarmed ? true : false;
 	KeyArray[13] = PressLT && PressA;
 	KeyArray[14] = PressWASD;
-	//15
+	KeyArray[15] = AtkOncePerMonta;
 	KeyArray[16] = PressRT;
 	KeyArray[17] = !PressRT;	
 	//18, 19 ´Â Valut Check Áß¿¡
@@ -320,6 +391,34 @@ void AMH_PlayerCharacter::KeyPressCheck()
 		else if (KeyDir > 45.0f && KeyDir <= 135.0f)	KeyDirInt = 1;
 		else											KeyDirInt = 2;	
 	}
+}
+
+void AMH_PlayerCharacter::MakeFalling()
+{
+	bool ShouldFall =    (!GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()) 
+					  && (!GetCharacterMovement()->IsMovingOnGround()) 
+				      && (WeaponType == EWeaponType::Unarmed);
+	
+	if (!ShouldFall)
+	{
+		return;
+	}
+
+	if (PressRB)
+	{
+		if (ComboStartMontage.Contains(TEXT("RunFall")))
+		{
+			PlayAnimMontage(ComboStartMontage[TEXT("RunFall")]);
+		}
+	}
+	else
+	{
+		if (ComboStartMontage.Contains(TEXT("WalkFall")))
+		{
+			PlayAnimMontage(ComboStartMontage[TEXT("WalkFall")]);
+		}
+	}
+
 }
 
 void AMH_PlayerCharacter::ValutCheck()
@@ -475,6 +574,40 @@ void AMH_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 }
 
+float AMH_PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	float SetHp = FMath::Clamp(StatComponent->GetCurrentHp() - DamageAmount, 0.0f, StatComponent->GetMaxHp());
+	StatComponent->SetCurrentHp(SetHp);
+
+	return DamageAmount;
+}
+
+void AMH_PlayerCharacter::StartHitStop(float Time)
+{
+	CustomTimeDilation = 0.05f;
+
+	FTimerHandle TimeHandle;
+	GetWorldTimerManager().SetTimer(TimeHandle, this, &AMH_PlayerCharacter::EndHitStop, 1.0f, false, Time);
+
+}
+
+void AMH_PlayerCharacter::StopCharge()
+{
+	FTimerHandle TimeHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimeHandle, this, &AMH_PlayerCharacter::StopChargeCallback, 2.0, false);
+
+}
+
+void AMH_PlayerCharacter::StopChargeCallback()
+{
+	SwdFlameEffect->SetActive(false);
+	BodyFlameEffect->SetActive(false);
+	OverlayMaterialDynamicInstance->SetScalarParameterValue(TEXT("Opacity"), 0.0);
+	ChargeStep = 0;
+}
+
 void AMH_PlayerCharacter::SwdAttachToSocket(FName socketName)
 {
 	bool isValidSocket = GetMesh()->DoesSocketExist(socketName);
@@ -490,6 +623,55 @@ void AMH_PlayerCharacter::SwdAttachToSocket(FName socketName)
 			WeaponType = EWeaponType::Armed;
 		}
 	}	
+}
+
+void AMH_PlayerCharacter::CameraShake(bool IsStrong)
+{
+	if (!IsStrong)
+	{
+		UGameplayStatics::PlayWorldCameraShake(GetWorld(), CamShakeWeak, GetActorLocation(), 0.0f, 1000.0f);
+	}
+	else
+	{
+		UGameplayStatics::PlayWorldCameraShake(GetWorld(), CamShakeStrong, GetActorLocation(), 0.0f, 1000.0f);
+	}
+
+}
+void AMH_PlayerCharacter::GSwdFstCharge()
+{
+	OpacityFloatTimeline.PlayFromStart();
+	OverlayMaterialDynamicInstance->SetVectorParameterValue(TEXT("Color"), FVector4(50.0, 8.0, 8.0));
+
+	ChargeStep = 1;
+}
+
+void AMH_PlayerCharacter::GSwdSndCharge()
+{
+	OpacityFloatTimeline.PlayFromStart();
+	OverlayMaterialDynamicInstance->SetVectorParameterValue(TEXT("Color"), FVector4(50.0, 8.0, 1.3));
+	ChargeStep = 2;
+}
+
+void AMH_PlayerCharacter::GSwdTrdCharge()
+{
+	OpacityFloatTimeline.PlayFromStart();
+	OverlayMaterialDynamicInstance->SetVectorParameterValue(TEXT("Color"), FVector4(19.5, 50.0, 50.0));
+
+	BodyFlameEffect->SetActive(true);
+	SwdFlameEffect->SetActive(true);
+
+	// ChargeEndVFX
+	UNiagaraSystem* ChargeEndVFX = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Script/Niagara.NiagaraSystem'/Game/MarketContent/SlashHitAndStabHit/Particles/Niagara/NS_ky_stabHit08.NS_ky_stabHit08'"));
+	if (ChargeEndVFX)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAttached(ChargeEndVFX, Gswd, TEXT("None"), FVector(0, 0, 0), FRotator(0, 0, 0), EAttachLocation::KeepRelativeOffset, true);
+	}
+
+	ChargeStep = 3;
+}
+
+void AMH_PlayerCharacter::TurnOnBuffEffect()
+{
 }
 
 void AMH_PlayerCharacter::ManualMoveBegin()
@@ -567,9 +749,9 @@ void AMH_PlayerCharacter::ShootWirebugEnd()
 	WireBug->SetComponentTickEnabled(false);
 }
 
-void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, bool IsChargeAtk, FName SectionName)
+void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, FName SectionName)
 {
-	int32 ArrayIndex = 0;
+	uint8 ArrayIndex = 0;
 	UAnimMontage* ComboMontage = nullptr;
 
 	if (MontageMap.IsEmpty())
@@ -584,20 +766,13 @@ void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage
 			continue;
 		}
 
-		uint8 index = UKismetMathLibrary::Conv_IntToByte(ArrayIndex);
-		EKeyInfo key = (EKeyInfo)index;
-
-		if (MontageMap.Contains(key))
+		if (MontageMap.Contains((EKeyInfo)ArrayIndex))
 		{
-			ComboMontage = MontageMap[key];
+			ComboMontage = MontageMap[(EKeyInfo)ArrayIndex];
 			break;
 		}
 	}
 
-	if (IsChargeAtk)
-	{
-		ChargeStopped();
-	}
 
 	if (ArrayIndex == (uint8)EKeyInfo::Space && WeaponType == EWeaponType::Armed)
 	{
@@ -621,6 +796,15 @@ void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage
 	
 }
 
+void AMH_PlayerCharacter::ComboEnd(bool IsChargeAtk)
+{
+	if (IsChargeAtk)
+	{
+		StopCharge();
+	}
+
+}
+
 void AMH_PlayerCharacter::AttackBegin()
 {
 	AtkOncePerMonta = false;
@@ -628,6 +812,11 @@ void AMH_PlayerCharacter::AttackBegin()
 
 void AMH_PlayerCharacter::AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius)
 {
+	if (AtkOncePerMonta)
+	{
+		return;
+	}
+
 	FVector TraceStartLocation = GetMesh()->GetSocketLocation(AtkStartSocket);
 	FVector TraceEndLocation = GetMesh()->GetSocketLocation(AtkEndSocket);
 
@@ -637,19 +826,8 @@ void AMH_PlayerCharacter::AttackTick(FName AtkStartSocket, FName AtkEndSocket, f
 
 	TArray<TObjectPtr<AActor>> IgnoreActors;
 	FHitResult TraceResult;
-
-	UKismetSystemLibrary::SphereTraceSingleForObjects(
-		GetWorld(),
-		TraceStartLocation,
-		TraceEndLocation,
-		AtkRadius,
-		ObjectTypeArray,
-		false,
-		IgnoreActors,
-		EDrawDebugTrace::None,
-		TraceResult,
-		true
-	);
+	
+	UKismetSystemLibrary::SphereTraceSingleForObjects(GetWorld(),TraceStartLocation,TraceEndLocation,AtkRadius,ObjectTypeArray,false,IgnoreActors,EDrawDebugTrace::None,TraceResult,true);
 
 	if (!TraceResult.bBlockingHit)
 	{
@@ -659,13 +837,70 @@ void AMH_PlayerCharacter::AttackTick(FName AtkStartSocket, FName AtkEndSocket, f
 	AtkOncePerMonta = true;
 	SwitchAtkMode();
 
+	FName CurrentMontageName = FName(GetMesh()->GetAnimInstance()->GetCurrentActiveMontage()->GetName());	
+	const FMHPlayerAttackData* AtkData = GSwdAttackDataTableRef->FindRow<FMHPlayerAttackData>(CurrentMontageName, FString("FindRow"));
+	
+	if (!AtkData)
+	{
+		UE_LOG(LogTemp, Log, TEXT("AtkData Found Failed"));
+		return;
+	}
+
+	bool IsCriticalHit = false;
+	const float Damage = StatComponent->CaculateDamage(AtkData->DamageMul, IsCriticalHit);
 
 
+	// Apply Damage
+	UGameplayStatics::ApplyPointDamage(TraceResult.GetActor(),Damage,TraceResult.Location,TraceResult,GetController(),this, nullptr);
+
+	// HitStop
+	StartHitStop(AtkData->HitStopTime);
+
+	// Camera Shake
+	if (AtkData->CAMShakePower == 1)
+	{
+		CameraShake(false);
+	}
+	else if (AtkData->CAMShakePower == 2)
+	{
+		CameraShake(true);
+	}
+
+	// Hit VFX	
+	if (HitEffect)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(	GetWorld(),	HitEffect,TraceResult.Location,GetActorForwardVector().ToOrientationRotator(),	FVector(1, 1, 1));
+	}
+
+	// Critical Hit VFX
+	if (IsCriticalHit && CriticalHitEffect != nullptr)
+	{
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(),CriticalHitEffect,TraceResult.Location,GetActorForwardVector().ToOrientationRotator(),FVector(1.5, 1.5, 0.1));
+	}
+}
+
+void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)
+{
+	UE_LOG(LogTemp, Log, TEXT("SetupCharacterWidget Called"));
+	UUtusiHPBarWidget* HpBarWidget = Cast<UUtusiHPBarWidget>(InUserWidget);	
+	if (HpBarWidget)
+	{		
+		UE_LOG(LogTemp, Log, TEXT("HpBarWidget Cast Success"));
+		HpBarWidget->SetMaxHp(StatComponent->GetMaxHp());
+		HpBarWidget->UpdateHpBar(StatComponent->GetCurrentHp());
+
+		StatComponent->OnCurrentHpChanged.AddUObject(HpBarWidget, &UUtusiHPBarWidget::UpdateHpBar);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("HpBarWidget Cast Failed"));
+	}
 
 }
 
-void AMH_PlayerCharacter::AttackEnd()
+void AMH_PlayerCharacter::OpacityUpdate(float Opcity)
 {
+	OverlayMaterialDynamicInstance->SetScalarParameterValue(TEXT("Opacity"), Opcity);
 }
 
 void AMH_PlayerCharacter::SwitchAtkMode()

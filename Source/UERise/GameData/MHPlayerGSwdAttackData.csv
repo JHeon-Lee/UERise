@@ -1,0 +1,14 @@
+Name,Description,DamageMul,PartAtkDamageMul,HitStopTime,CAMShakePower
+g117_Montage,참모아베기1,15,10,0.25,1
+g117_Montage2,참모아베기2,144,50,0.4,2
+g102_Montage,모아베기,52,10,0.25,1
+g105_Montage,강모아베기,65,30,0.25,1
+g107_Montage,강모아넘기기,72,20,0.2,2
+g106_Montage,베어넘기기,34,34,0.2,1
+g109_Montage,베어올리기,41,41,0.2,1
+g121_Montage2,태클,28,28,0.2,2
+g121_Montage3,태클,28,28,0.2,2
+plw_GreatSword_100_151_Montage,헌팅엣지,30,0,0.005,1
+plw_GreatSword_100_174_Montage,낙하찌르기,42,42,0.1,1
+plw_GreatSword_100_166_Montage,낙하찌르기착지,42,42,0.2,0
+plw_GreatSword_100_183_Montage,낙하베기,118,118,0.2,1

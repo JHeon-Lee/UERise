@@ -10,6 +10,8 @@
 #include "InputMappingContext.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
+#include "UI/UtusiHPBarWidget.h"
+#include "UI/MHWidgetComponent.h"
 #include "Physics/MHCollision.h"
 
 // Sets default values
@@ -158,6 +160,24 @@ AMHCharacterPlayer::AMHCharacterPlayer()
 	}
 
 	CurrentCharacterCameraType = ECharacterCameraType::ThirdPersonCombatView;
+
+	// WidgetComponent
+	PlayerWidgetComponent = CreateDefaultSubobject<UMHWidgetComponent>(TEXT("Widget"));
+	PlayerWidgetComponent->SetupAttachment(GetMesh());
+	PlayerWidgetComponent->SetRelativeLocation(FVector(0, 0, 180));
+	static ConstructorHelpers::FClassFinder<UUtusiHPBarWidget> HpBarWidgetRef(TEXT("/Game/Characters/Utusi/UI/WBP_HpProgressBar.WBP_HpProgressBar_C"));
+	if (HpBarWidgetRef.Class)
+	{
+		PlayerWidgetComponent->SetWidgetClass(HpBarWidgetRef.Class);
+		PlayerWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+		PlayerWidgetComponent->SetDrawSize(FVector2D(150.0f, 15.0f));
+		PlayerWidgetComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		UE_LOG(LogTemp, Log, TEXT("PlayerWidgetComponent Construct Success"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("PlayerWidgetComponent Construct Failed"));
+	}
 
 	// Status
 	bIsDrawing = false;

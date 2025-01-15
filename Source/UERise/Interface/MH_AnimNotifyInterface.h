@@ -51,6 +51,15 @@ class UERISE_API IMH_AnimNotifyInterface
 public:
 	virtual void SwdAttachToSocket(FName socketName) = 0;
 
+	virtual void CameraShake(bool IsStrong = false) = 0;
+
+	virtual void GSwdFstCharge() = 0;
+	virtual void GSwdSndCharge() = 0;
+	virtual void GSwdTrdCharge() = 0;
+
+	virtual void TurnOnBuffEffect() = 0;
+
+
 	virtual void ManualMoveBegin() = 0;
 	virtual void ManualMoveTick(float ManualMoveSpeed, float ManualMoveZSpeed, float FlymodeTime, bool WallRun) = 0;
 	virtual void ManualMoveEnd() = 0;
@@ -59,11 +68,10 @@ public:
 	virtual void ShootWirebugTick(float Distance, float ZDistance, float FDistance, float Movetime) = 0;
 	virtual void ShootWirebugEnd() = 0;
 
-	virtual void ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, bool IsChargeAtk, FName SectionName) = 0;
+	virtual void ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap,FName SectionName) = 0;
+	virtual void ComboEnd(bool IsChargeAtk) = 0;
 
 	virtual void AttackBegin() = 0;
 	virtual void AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius) = 0;
-	virtual void AttackEnd() = 0;
-
 
 };

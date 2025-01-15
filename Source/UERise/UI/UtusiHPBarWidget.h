@@ -19,6 +19,7 @@ public:
 
 protected:
 	virtual void NativeConstruct() override;
+	
 
 
 
@@ -31,8 +32,6 @@ protected:
 	UPROPERTY()
 	TObjectPtr<class UProgressBar> HpProgressBar;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	float MaxHP;
-
-
 };

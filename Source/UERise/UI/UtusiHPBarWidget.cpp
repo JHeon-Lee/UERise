@@ -15,25 +15,38 @@ UUtusiHPBarWidget::UUtusiHPBarWidget(const FObjectInitializer& ObjectInitializer
 void UUtusiHPBarWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	HpProgressBar = Cast<UProgressBar>(GetWidgetFromName(TEXT("HpBar")));
+	if (HpProgressBar)
+	{
+		UE_LOG(LogTemp, Log, TEXT("HPBar Cast Success"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("HPBar Cast Failed"));
+	}
 
-	HpProgressBar = Cast<UProgressBar>(GetWidgetFromName(TEXT("UtusiHpBar")));
-	ensure(HpProgressBar);
-	
 	IMHWidgetInterface* CharacterWidget = Cast<IMHWidgetInterface>(OwingActor);
 	if (CharacterWidget)
 	{
+		UE_LOG(LogTemp, Log, TEXT("UUtusiHPBarWidget OwingActor Cast Success"));
 		CharacterWidget->SetupCharacterWidget(this);
-		GEngine->AddOnScreenDebugMessage(-1, 5, FColor::Green, TEXT("sdsdsdsdsd"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("UUtusiHPBarWidget OwingActor Cast Failed"));
 	}
 }
 
 void UUtusiHPBarWidget::UpdateHpBar(float NewCurrentHp)
 {
+	
 	ensure(MaxHP > 0.0f);
+	
 	if (HpProgressBar)
 	{
 		HpProgressBar->SetPercent(NewCurrentHp / MaxHP);
-
-
+		UE_LOG(LogTemp, Log, TEXT("Hp %f Update"), (NewCurrentHp / MaxHP));
 	}
+
+
 }

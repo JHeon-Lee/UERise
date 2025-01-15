@@ -17,6 +17,7 @@ class UERISE_API UANS_AnimCombo : public UAnimNotifyState
 
 public:
 	virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference) override;
+	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Editable")

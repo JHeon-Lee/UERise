@@ -3,13 +3,21 @@
 
 #include "UI/MHWidgetComponent.h"
 #include "UI/MHUserWidget.h"
+#include "UI/UtusiHPBarWidget.h"
 
 void UMHWidgetComponent::InitWidget()
 {
 	Super::InitWidget();
-	UMHUserWidget* MHUserWidget = Cast<UMHUserWidget>(GetWidget());
+	UE_LOG(LogTemp, Log, TEXT("UMHWidgetComponent InitWidget Called"));
+
+	UUtusiHPBarWidget* MHUserWidget = Cast<UUtusiHPBarWidget>(GetWidget());
 	if (MHUserWidget)
 	{
+		UE_LOG(LogTemp, Log, TEXT("MHUserWidget Cast Success"));
 		MHUserWidget->SetOwningActor(GetOwner());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("MHUserWidget Cast Failed"));
 	}
 }

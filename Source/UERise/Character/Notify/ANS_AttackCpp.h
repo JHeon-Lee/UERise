@@ -15,9 +15,10 @@ class UERISE_API UANS_AttackCpp : public UAnimNotifyState
 	GENERATED_BODY()
 	
 public:
+	UANS_AttackCpp() : AtkStartSocket(TEXT("R_Weapon")), AtkEndSocket(TEXT("R_Weapon_End")), AtkRadius(15.0f) {};
+
 	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference) override;
 	virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference) override;
-	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Editable")

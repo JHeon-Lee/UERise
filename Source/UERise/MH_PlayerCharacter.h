@@ -5,8 +5,16 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "InputActionValue.h"
+#include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
 #include "Interface/MH_AnimNotifyInterface.h"
+#include "Interface/MHWidgetInterface.h"
+#include "Components/TimelineComponent.h"
 #include "MH_PlayerCharacter.generated.h"
+
+
+//FOnTimelineFloat GSwdOverlayMaterialOpacity;
+
 
 UENUM(BlueprintType)
 enum class EWeaponType : uint8
@@ -32,8 +40,17 @@ enum class EValutMontage : uint8
 	Vault UMETA(DisplayName = "Vault")
 };
 
+UENUM(BlueprintType)
+enum class EDamageTakeType : uint8
+{
+	Default UMETA(DisplayName = "Default"),
+	Evade UMETA(DisplayName = "Evade"),
+	Gaurd UMETA(DisplayName = "Gaurd"),
+	Tackle UMETA(DisplayName = "Tackle"),
+};
+
 UCLASS()
-class UERISE_API AMH_PlayerCharacter : public ACharacter, public IMH_AnimNotifyInterface
+class UERISE_API AMH_PlayerCharacter : public ACharacter, public IMH_AnimNotifyInterface, public IMHWidgetInterface
 {
 	GENERATED_BODY()
 
@@ -44,6 +61,7 @@ public:
 private:
 	void ComponentAttach();
 	void InputSystemSetting();
+
 
 public:
 	virtual void PostInitializeComponents() override;
@@ -76,27 +94,43 @@ public:
 	void PressRTOn() { PressRT = true; }
 	void PressLTOn() { PressLT = true; }
 
+	void SwitchAtkMode();
 
 
 public:
 // Called every frame
 	virtual void Tick(float DeltaTime) override;
 	void KeyPressCheck();
+	void MakeFalling();
 
 	// Valut
 	void ValutCheck();
-		void GetFrontObjectLocation();
-		void GetObjectDimension();
-		void PlayValutMontatge();
-
-
+	void GetFrontObjectLocation();
+	void GetObjectDimension();
+	void PlayValutMontatge();
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	//DamageTaken
+	float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
-//Interface Override
+	void StartHitStop(float Time);
+	void EndHitStop() { CustomTimeDilation = 1.0f; }
+	void StopCharge();
+	void StopChargeCallback();
+
+
+//AnimNotify Interface Override
 	virtual void SwdAttachToSocket(FName socketName) override;
+
+	virtual void CameraShake(bool IsStrong) override;
+
+	virtual void GSwdFstCharge() override;
+	virtual void GSwdSndCharge() override;
+	virtual void GSwdTrdCharge() override;
+
+	virtual void TurnOnBuffEffect() override;	
 
 	virtual void ManualMoveBegin() override;
 	virtual void ManualMoveTick(float ManualMoveSpeed, float ManualMoveZSpeed, float FlymodeTime, bool WallRun) override;
@@ -106,20 +140,21 @@ public:
 	virtual void ShootWirebugTick(float Distance, float ZDistance, float FDistance, float Movetime) override;
 	virtual void ShootWirebugEnd() override;
 
-	virtual void ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, bool IsChargeAtk, FName SectionName) override;
+	virtual void ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, FName SectionName) override;
+	virtual void ComboEnd(bool IsChargeAtk) override;
 
 	virtual void AttackBegin() override;
 	virtual void AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius) override;
-	virtual void AttackEnd() override;
 
-	void SwitchAtkMode();
+// Widget Interface Override
+	virtual void SetupCharacterWidget(class UMHUserWidget* InUserWidget) override;
+
+	UFUNCTION()
+	void OpacityUpdate(float Opcity);
 
 //
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void ChargeStopped();
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void ANS_Attack();
 
 
 public:
@@ -130,13 +165,43 @@ public:
 	TObjectPtr<class UMaterialInstanceDynamic> PostProcessMaterialRef;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
-	TObjectPtr<class UMaterialInstanceDynamic> OverlayMaterialRef;
+	TObjectPtr<class UMaterialInstance> OverlayMaterialInstanceRef;
+
+	UPROPERTY()
+	TObjectPtr<class UMaterialInstanceDynamic> OverlayMaterialDynamicInstance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
 	TObjectPtr<class APawn> NearPawnRef;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
 	TObjectPtr<class AActor> NearPropRef;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<class UDataTable> GSwdAttackDataTableRef;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat")
+	TObjectPtr<class UMH_PlayerStatComponent> StatComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	TObjectPtr<class UMHWidgetComponent> PlayerWidgetComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
+	TObjectPtr<class UNiagaraSystem> HitEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
+	TObjectPtr<class UNiagaraSystem> CriticalHitEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TSubclassOf<class ULegacyCameraShake> CamShakeWeak;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TSubclassOf<class ULegacyCameraShake> CamShakeStrong;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<UCurveFloat> OpacityCurve;
+
+	//Timeline
+	FTimeline OpacityFloatTimeline;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
 	float TargetRotation;
@@ -284,6 +349,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enum")
 	ELevelType LevelType;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enum")
+	EDamageTakeType DamageTakeType;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
 	TMap<FName,TObjectPtr<class UAnimMontage>> ComboStartMontage;
 
@@ -313,6 +381,20 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
 	TObjectPtr<class USkeletalMeshComponent> Gswd;
+
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class UNiagaraComponent> BodyFlameEffect;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class UNiagaraComponent> BuffEffect;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class UParticleSystemComponent> BugEffect;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class UParticleSystemComponent> SwdFlameEffect;
+
 
 // Input
 protected:

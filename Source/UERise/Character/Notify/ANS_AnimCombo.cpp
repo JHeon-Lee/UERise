@@ -13,7 +13,21 @@ void UANS_AnimCombo::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceB
 		IMH_AnimNotifyInterface* CharacterPlayer = Cast<IMH_AnimNotifyInterface>(MeshComp->GetOwner());
 		if (CharacterPlayer)
 		{
-			CharacterPlayer->ComboTick(MontageMap, IsChargeAtk, SectionName);
+			CharacterPlayer->ComboTick(MontageMap, SectionName);
+		}
+	}
+}
+
+void UANS_AnimCombo::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
+{
+	Super::NotifyEnd(MeshComp, Animation, EventReference);
+
+	if (MeshComp)
+	{
+		IMH_AnimNotifyInterface* CharacterPlayer = Cast<IMH_AnimNotifyInterface>(MeshComp->GetOwner());
+		if (CharacterPlayer)
+		{
+			CharacterPlayer->ComboEnd(IsChargeAtk);
 		}
 	}
 }

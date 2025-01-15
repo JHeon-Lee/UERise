@@ -91,6 +91,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> TmpChangeViewAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	TObjectPtr<class UMHWidgetComponent> PlayerWidgetComponent;
+
 	void ThirdPersonMove(const FInputActionValue& Value);
 	void ThirdPersonLook(const FInputActionValue& Value);
 

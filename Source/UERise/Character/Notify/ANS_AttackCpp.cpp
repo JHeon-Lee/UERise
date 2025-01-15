@@ -14,7 +14,7 @@ void UANS_AttackCpp::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequence
 		IMH_AnimNotifyInterface* CharacterPlayer = Cast<IMH_AnimNotifyInterface>(MeshComp->GetOwner());
 		if (CharacterPlayer)
 		{
-			CharacterPlayer->AttackBegin();
+			CharacterPlayer->AttackBegin();			
 		}
 	}
 }
@@ -29,20 +29,6 @@ void UANS_AttackCpp::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceB
 		if (CharacterPlayer)
 		{
 			CharacterPlayer->AttackTick(AtkStartSocket, AtkEndSocket, AtkRadius);
-		}
-	}
-}
-
-void UANS_AttackCpp::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
-{
-	Super::NotifyEnd(MeshComp, Animation, EventReference);
-
-	if (MeshComp)
-	{
-		IMH_AnimNotifyInterface* CharacterPlayer = Cast<IMH_AnimNotifyInterface>(MeshComp->GetOwner());
-		if (CharacterPlayer)
-		{
-			CharacterPlayer->AttackEnd();
 		}
 	}
 }

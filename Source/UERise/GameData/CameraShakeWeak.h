@@ -3,15 +3,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "UObject/NoExportTypes.h"
-#include "MyObject.generated.h"
+#include "LegacyCameraShake.h"
+#include "CameraShakeWeak.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class UERISE_API UMyObject : public UObject
+class UERISE_API UCameraShakeWeak : public ULegacyCameraShake
 {
 	GENERATED_BODY()
-	
+
+public:
+
+	UCameraShakeWeak();
 };

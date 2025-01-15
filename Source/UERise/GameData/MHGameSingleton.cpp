@@ -5,6 +5,13 @@
 
 DEFINE_LOG_CATEGORY(LogMHGameSingleton);
 
+#define GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
+	static FGameplayAttribute Get##PropertyName##Attribute() \
+	{ \
+		static FProperty* Prop = FindFieldChecked<FProperty>(ClassName::StaticClass(), GET_MEMBER_NAME_CHECKED(ClassName, PropertyName)); \
+		return Prop; \
+	}
+
 UMHGameSingleton::UMHGameSingleton()
 {
 	static ConstructorHelpers::FObjectFinder<UDataTable> DataTableRef(TEXT("/Script/Engine.DataTable'/Game/GameData/MHMonsterStatTable.MHMonsterStatTable'"));
