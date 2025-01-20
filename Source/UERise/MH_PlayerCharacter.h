@@ -7,61 +7,24 @@
 #include "InputActionValue.h"
 #include "NiagaraSystem.h"
 #include "NiagaraComponent.h"
+#include "GameData/MHGlobalEnum.h"
 #include "Interface/MH_AnimNotifyInterface.h"
 #include "Interface/MHWidgetInterface.h"
+#include "Interface/MH_WeaponComponentInterface.h"
 #include "Components/TimelineComponent.h"
 #include "MH_PlayerCharacter.generated.h"
 
-
-//FOnTimelineFloat GSwdOverlayMaterialOpacity;
-
-
-UENUM(BlueprintType)
-enum class EWeaponType : uint8
-{
-	Unarmed UMETA(DisplayName = "Unarmed"),
-	Armed UMETA(DisplayName = "Armed"),
-	Riding UMETA(DisplayName = "Riding"),
-	DragonRide UMETA(DisplayName = "DragonRide")
-};
-
-UENUM(BlueprintType)
-enum class ELevelType : uint8
-{
-	Village UMETA(DisplayName = "Village"),
-	Field UMETA(DisplayName = "Field")
-};
-
-UENUM(BlueprintType)
-enum class EValutMontage : uint8
-{
-	WallRun UMETA(DisplayName = "WallRun"),
-	JumpOver UMETA(DisplayName = "JumpOver"),
-	Vault UMETA(DisplayName = "Vault")
-};
-
-UENUM(BlueprintType)
-enum class EDamageTakeType : uint8
-{
-	Default UMETA(DisplayName = "Default"),
-	Evade UMETA(DisplayName = "Evade"),
-	Gaurd UMETA(DisplayName = "Gaurd"),
-	Tackle UMETA(DisplayName = "Tackle"),
-};
-
 UCLASS()
-class UERISE_API AMH_PlayerCharacter : public ACharacter, public IMH_AnimNotifyInterface, public IMHWidgetInterface
+class UERISE_API AMH_PlayerCharacter : public ACharacter, public IMH_AnimNotifyInterface, public IMHWidgetInterface, public IMH_WeaponComponentInterface
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this character's properties
-	AMH_PlayerCharacter();
+	AMH_PlayerCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 private:
 	void ComponentAttach();
-	void InputSystemSetting();
-
 
 public:
 	virtual void PostInitializeComponents() override;
@@ -85,7 +48,7 @@ public:
 	void PressRBOff() { PressRB = false; }
 	void PressRTOff() { PressRT = false; }
 	void PressLTOff() { PressLT = false; }
-	void PressWASDOff() { PressWASD = false; ActionValue = FVector2D(0.0, 0.0); }
+	void PressWASDOff() { PressWASD = false; ActionValue = FVector2D(0.0, 0.0); KeyDirInt = 0;}
 
 	void PressBOn() { PressB = true; }
 	void PressXOn() { PressX = true; }
@@ -100,14 +63,12 @@ public:
 public:
 // Called every frame
 	virtual void Tick(float DeltaTime) override;
+
 	void KeyPressCheck();
 	void MakeFalling();
 
-	// Valut
-	void ValutCheck();
-	void GetFrontObjectLocation();
-	void GetObjectDimension();
-	void PlayValutMontatge();
+	void PlayValutMontage(EValutMontage ValutMontage);
+
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -117,18 +78,11 @@ public:
 
 	void StartHitStop(float Time);
 	void EndHitStop() { CustomTimeDilation = 1.0f; }
-	void StopCharge();
-	void StopChargeCallback();
 
 
 //AnimNotify Interface Override
-	virtual void SwdAttachToSocket(FName socketName) override;
 
 	virtual void CameraShake(bool IsStrong) override;
-
-	virtual void GSwdFstCharge() override;
-	virtual void GSwdSndCharge() override;
-	virtual void GSwdTrdCharge() override;
 
 	virtual void TurnOnBuffEffect() override;	
 
@@ -146,15 +100,70 @@ public:
 	virtual void AttackBegin() override;
 	virtual void AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius) override;
 
+	virtual void DamageTakeBegin(EDamageTakeType DmgTakeType) override;
+	virtual void DamageTakeEnd() override;
+
+	virtual void ValutBegin(float Offset) override;
+	virtual void ValutEnd() override;
+
 // Widget Interface Override
 	virtual void SetupCharacterWidget(class UMHUserWidget* InUserWidget) override;
 
-	UFUNCTION()
-	void OpacityUpdate(float Opcity);
+// Weapon Interface Override
+	virtual void SetPlayerState(EWeaponType Type) override;
+
+
 
 //
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void ChargeStopped();
+
+	UFUNCTION(BlueprintCallable)
+	void AttachGreatSwdComponent();
+
+
+protected:
+	// Component Attach
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class USpringArmComponent> CameraBoom;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UCameraComponent> FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat")
+	TObjectPtr<class UMH_PlayerStatComponent> StatComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
+	TObjectPtr<class UMHWidgetComponent> PlayerWidgetComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Valut")
+	TObjectPtr<class UMHValutComponent> PlayerValutComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMeshComponent> WireBug;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMeshComponent> Part_Helm;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMeshComponent> Part_Body;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMeshComponent> Part_Leg;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMeshComponent> Part_Arm;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class USkeletalMeshComponent> Part_Wst;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class UNiagaraComponent> BuffEffect;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
+	TObjectPtr<class UParticleSystemComponent> BugEffect;
+
+
 
 
 public:
@@ -179,11 +188,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
 	TObjectPtr<class UDataTable> GSwdAttackDataTableRef;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stat")
-	TObjectPtr<class UMH_PlayerStatComponent> StatComponent;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
-	TObjectPtr<class UMHWidgetComponent> PlayerWidgetComponent;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
 	TObjectPtr<class UNiagaraSystem> HitEffect;
@@ -203,32 +208,6 @@ public:
 	//Timeline
 	FTimeline OpacityFloatTimeline;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	float TargetRotation;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	float DistanceToWall;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	float VaultOffset;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	float WallSlope;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	float WallRotZ;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	FVector ImpactPoint;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	FVector InitialImpactPoint;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	FVector WarpPoint;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
-	FVector ImpactNormal;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Key")
 	bool PressWASD;
@@ -261,7 +240,7 @@ public:
 	float KeyDir;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Key")
-	TArray<bool> KeyArray;
+	TMap<EKeyInfo, bool> KeyArray;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	bool AtkOncePerMonta;
@@ -271,9 +250,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	bool ToOppositeDir;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
-	bool CanWallRun;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	bool ManualMove;
@@ -343,6 +319,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
 	float ANSTimer;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
+	float BuffTimer;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enum")
 	EWeaponType WeaponType;
 
@@ -367,65 +346,37 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
 	TArray<TObjectPtr<class UAnimMontage>> SpecialMoveMontages;
 
-protected:
-
-// Component Attach
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class USpringArmComponent> CameraBoom;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<class UCameraComponent> FollowCamera;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class USkeletalMeshComponent> WireBug;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class USkeletalMeshComponent> Gswd;
-
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class UNiagaraComponent> BodyFlameEffect;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class UNiagaraComponent> BuffEffect;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class UParticleSystemComponent> BugEffect;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class UParticleSystemComponent> SwdFlameEffect;
-
 
 // Input
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputMappingContext> UtusiMappingContext;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_A;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_B;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_X;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_Y;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_RB;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_RT;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_LT;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_Move;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_Look;	
 
 

@@ -2,21 +2,21 @@
 
 #include "MH_PlayerCharacter.h"
 #include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "InputMappingContext.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "CharacterStat/UtusiStatComponent.h"
 #include "Animation/MHAnimInstancePlayer.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/DamageType.h"
-#include "GameData/MH_GlobalDamageType.h"
 #include "Kismet/KismetMaterialLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/PostProcessVolume.h"
 #include "Engine/DataTable.h"
+#include "Engine/DamageEvents.h"
 #include "UI/UtusiHPBarWidget.h"
 #include "UI/MHWidgetComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -24,28 +24,84 @@
 #include "Particles/ParticleSystem.h"
 #include "Components/TimelineComponent.h"
 #include "Character/Component/MH_PlayerStatComponent.h"
+#include "Character/Component/MHGreatSwordComponent.h"
+#include "Character/Component/MHValutComponent.h"
+#include "Character/Component/MHCharacterMovementComponent.h"
 #include "GameData/MHPlayerAttackData.h"
+#include "DamageType/MHBasicDamageType.h"
 #include "LegacyCameraShake.h"
 
-//F:\UE_5.1\UE_5.1\Engine\Source\Runtime\Engine\Classes\Particles\ParticleSystemComponent.h
 
-// Sets default values
-AMH_PlayerCharacter::AMH_PlayerCharacter()
+AMH_PlayerCharacter::AMH_PlayerCharacter(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer.SetDefaultSubobjectClass<UMHCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	ComponentAttach();
-	InputSystemSetting();
-	
-	static ConstructorHelpers::FObjectFinder<UDataTable> DataTable(TEXT("/Script/Engine.DataTable'/Game/Characters/Utusi/Data/PlayerGSwdAttackDataTable.PlayerGSwdAttackDataTable'"));
-	if (DataTable.Object != nullptr)
+
+	// KeyArray Initialize
+	for (uint8 Enum = static_cast<uint8>(EKeyInfo::Default); Enum < static_cast<uint8>(EKeyInfo::Max); Enum++)
 	{
-		GSwdAttackDataTableRef = DataTable.Object;
+		EKeyInfo key = static_cast<EKeyInfo>(Enum);
+		KeyArray.Add(key, false);
 	}
+
+
+	ComponentAttach();
+}
+
+void AMH_PlayerCharacter::ComponentAttach()
+{
+	if (UMHCharacterMovementComponent* MovementComponent = Cast<UMHCharacterMovementComponent>(GetCharacterMovement()))
+	{
+		MovementComponent->OnMovementFallingDelegate.AddUObject(this, &AMH_PlayerCharacter::MakeFalling);
+		MovementComponent->OnMovementWalkingDelegate.AddUObject(this, &AMH_PlayerCharacter::KeyPressCheck);
+	}
+
+	// Valut Component
+	PlayerValutComponent = CreateDefaultSubobject<UMHValutComponent>(TEXT("ValutComponent"));
+	if (PlayerValutComponent)
+	{
+		PlayerValutComponent->ValutMontageDelegate.AddUObject(this, &AMH_PlayerCharacter::PlayValutMontage);
+	}
+
+	//Camera
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
+	CameraBoom->SetupAttachment(RootComponent);
+	CameraBoom->TargetArmLength = 450.0f;
+	CameraBoom->TargetOffset = FVector(0, 0, 70);
+	CameraBoom->bUsePawnControlRotation = true;
+
+	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	FollowCamera->bUsePawnControlRotation = false;
+
+	// Mesh Attach
+	WireBug = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WireBug"));
+	WireBug->SetupAttachment(GetMesh());
+
+	Part_Helm = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Helm"));
+	Part_Helm->SetupAttachment(GetMesh());
+
+	Part_Body = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Body"));
+	Part_Body->SetupAttachment(GetMesh());
+
+	Part_Leg = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Leg"));
+	Part_Leg->SetupAttachment(GetMesh());
+
+	Part_Arm = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arm"));
+	Part_Arm->SetupAttachment(GetMesh());
+
+	Part_Wst = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Wst"));
+	Part_Wst->SetupAttachment(GetMesh());
+
+	BuffEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BuffEffect"));
+	BuffEffect->SetupAttachment(GetMesh(), TEXT("R_Grip_00"));
+
+	BugEffect = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("BugEffect"));
+	BugEffect->SetupAttachment(WireBug);
 
 	// Stat Component
 	StatComponent = CreateDefaultSubobject<UMH_PlayerStatComponent>(TEXT("StatComponent"));
-
+	
 	// WidgetComponent
 	PlayerWidgetComponent = CreateDefaultSubobject<UMHWidgetComponent>(TEXT("Widget"));
 	PlayerWidgetComponent->SetupAttachment(GetMesh());
@@ -63,129 +119,9 @@ AMH_PlayerCharacter::AMH_PlayerCharacter()
 	{
 		UE_LOG(LogTemp, Log, TEXT("PlayerWidgetComponent Construct Failed"));
 	}
-
-	static ConstructorHelpers::FObjectFinder<UCurveFloat> Curve(TEXT("/Script/Engine.CurveFloat'/Game/Characters/Utusi/Data/OpacityFloat.OpacityFloat'"));
-	if (Curve.Object)
-	{
-		OpacityCurve = Curve.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UMaterialInstance> OverlayMaterial(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/armorTest/BodyGlareMatInst.BodyGlareMatInst'"));
-	if (OverlayMaterial.Object)
-	{
-		OverlayMaterialInstanceRef = OverlayMaterial.Object;
-	}
-
+	
 }
 
-void AMH_PlayerCharacter::ComponentAttach()
-{
-	//Camera
-	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
-	CameraBoom->SetupAttachment(RootComponent);
-	CameraBoom->TargetArmLength = 450.0f;
-	CameraBoom->TargetOffset = FVector(0, 0, 70);
-	CameraBoom->bUsePawnControlRotation = true;
-
-	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
-	FollowCamera->bUsePawnControlRotation = false;
-
-	// Mesh Attach
-	WireBug = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WireBug"));
-	WireBug->SetupAttachment(GetMesh());
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> WireBugMeshRef(TEXT("/ Script / Engine.SkeletalMesh'/Game/Characters/WireBug/ec008_00_meshout.ec008_00_meshout'"));
-	if (WireBugMeshRef.Object)
-	{
-		WireBug->SetSkeletalMesh(WireBugMeshRef.Object);
-	}
-
-	Gswd = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Gswd"));
-	Gswd->SetupAttachment(GetMesh(), TEXT("B_Weapon"));
-	static ConstructorHelpers::FObjectFinder<USkeletalMesh> GswdMeshRef(TEXT("/Script/Engine.SkeletalMesh'/Game/armorTest/Wyvern/G_Swd086_meshout.G_Swd086_meshout'"));
-	if (GswdMeshRef.Object)
-	{
-		Gswd->SetSkeletalMesh(GswdMeshRef.Object);
-	}
-
-	BodyFlameEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BodyFlameEffect"));
-	BodyFlameEffect->SetupAttachment(GetMesh());
-
-	BuffEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BuffEffect"));
-	BodyFlameEffect->SetupAttachment(GetMesh(), TEXT("R_Grip_00"));
-
-	BugEffect = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("BugEffect"));
-	BugEffect->SetupAttachment(WireBug);
-
-	SwdFlameEffect = CreateDefaultSubobject<UParticleSystemComponent>(TEXT("SwdFlameEffect"));
-	SwdFlameEffect->SetupAttachment(Gswd);
-}
-
-void AMH_PlayerCharacter::InputSystemSetting()
-{
-
-	//Input
-	static ConstructorHelpers::FObjectFinder<UInputMappingContext> InputMappingContextRef(TEXT("/ Script / EnhancedInput.InputMappingContext'/Game/InputSystem/UtusiMappingContext.UtusiMappingContext'"));
-	if (InputMappingContextRef.Object)
-	{
-		UtusiMappingContext = InputMappingContextRef.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionA(TEXT("/Script/EnhancedInput.InputAction'/Game/InputSystem/IA_A.IA_A'"));
-
-	if (nullptr != InputActionA.Object)
-	{
-		IA_A = InputActionA.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionB(TEXT("/ Script / EnhancedInput.InputAction'/Game/InputSystem/IA_B.IA_B'"));
-	if (nullptr != InputActionB.Object)
-	{
-		IA_B = InputActionB.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionX(TEXT("/Script/EnhancedInput.InputAction'/Game/InputSystem/IA_X.IA_X'"));
-	if (nullptr != InputActionX.Object)
-	{
-		IA_X = InputActionX.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionY(TEXT("/Script/EnhancedInput.InputAction'/Game/InputSystem/IA_Y.IA_Y'"));
-	if (nullptr != InputActionY.Object)
-	{
-		IA_Y = InputActionY.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionRB(TEXT("/Script/EnhancedInput.InputAction'/Game/InputSystem/IA_RB.IA_RB'"));
-	if (nullptr != InputActionRB.Object)
-	{
-		IA_RB = InputActionRB.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionRT(TEXT("/Script/EnhancedInput.InputAction'/Game/InputSystem/IA_RT.IA_RT'"));
-	if (nullptr != InputActionRT.Object)
-	{
-		IA_RT = InputActionRT.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionLT(TEXT("/Script/EnhancedInput.InputAction'/Game/InputSystem/IA_LT.IA_LT'"));
-	if (nullptr != InputActionLT.Object)
-	{
-		IA_LT = InputActionLT.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionMoveRef(TEXT("/Script/EnhancedInput.InputAction'/Game/ThirdPerson/Input/Actions/IA_Move.IA_Move'"));
-	if (nullptr != InputActionMoveRef.Object)
-	{
-		IA_Move = InputActionMoveRef.Object;
-	}
-
-	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionLookRef(TEXT("/Script/EnhancedInput.InputAction'/Game/ThirdPerson/Input/Actions/IA_Look.IA_Look'"));
-	if (nullptr != InputActionLookRef.Object)
-	{
-		IA_Look = InputActionLookRef.Object;
-	}
-}
 
 void AMH_PlayerCharacter::PostInitializeComponents()
 {
@@ -204,16 +140,6 @@ void AMH_PlayerCharacter::BeginPlay()
 	{
 		Subsystem->AddMappingContext(UtusiMappingContext, 0);
 	}	
-
-	if (OverlayMaterialInstanceRef)
-	{
-		OverlayMaterialDynamicInstance =UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), OverlayMaterialInstanceRef);
-		Gswd->SetOverlayMaterial(OverlayMaterialDynamicInstance);
-	}
-
-	FOnTimelineFloat GSwdOverlayMaterialOpacity;
-	GSwdOverlayMaterialOpacity.BindUFunction(this, FName("OpacityUpdate"));
-	OpacityFloatTimeline.AddInterpFloat(OpacityCurve, GSwdOverlayMaterialOpacity);
 
 }
 
@@ -235,6 +161,11 @@ void AMH_PlayerCharacter::URotate(const FInputActionValue& Value)
 	{
 		KeyDir = KeyDir + 360.0f;
 	}
+
+	if (KeyDir > -45.0f && KeyDir <= 45.0f)	KeyDirInt = 0;
+	else if (KeyDir > -135.0f && KeyDir <= -45.0f)	KeyDirInt = 3;
+	else if (KeyDir > 45.0f && KeyDir <= 135.0f)	KeyDirInt = 1;
+	else											KeyDirInt = 2;
 }
 
 void AMH_PlayerCharacter::ULook(const FInputActionValue& Value)
@@ -254,18 +185,27 @@ void AMH_PlayerCharacter::ComboStartA()
 {	
 	PressA = true;
 
-	// Play Montage When Moving On Ground and not any Montage Playing
-	if (GetCharacterMovement()->IsMovingOnGround() && !GetMesh()->GetAnimInstance()->IsAnyMontagePlaying())
+	// return, if any Montage Playing now
+	if (GetMesh()->GetAnimInstance()->IsAnyMontagePlaying() || !GetCharacterMovement()->IsMovingOnGround())
 	{
-		if (WeaponType == EWeaponType::Unarmed)
-		{
-			PlayAnimMontage(ComboStartMontage[TEXT("AUnarmed")]);
-		}
-		else if (WeaponType == EWeaponType::Armed)
+		return;
+	}
+
+	if (UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>())
+	{
+        if (WeaponType == EWeaponType::GreatSwdArmed)
 		{
 			PlayAnimMontage(ComboStartMontage[TEXT("AArmed")]);
-		}
-	}			
+			GreatSwordComponent->ComboStartA();
+		}		
+	}
+
+
+	if (WeaponType == EWeaponType::Unarmed)
+	{
+		PlayAnimMontage(ComboStartMontage[TEXT("AUnarmed")]);
+	}
+
 }
 
 void AMH_PlayerCharacter::ComboStartY()
@@ -277,50 +217,62 @@ void AMH_PlayerCharacter::ComboStartY()
 		return;
 	}
 
-	if (WeaponType == EWeaponType::Armed)
+	if (UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>())
 	{
-		if (PressB)
+		if (WeaponType == EWeaponType::GreatSwdArmed)
 		{
-			PlayAnimMontage(ComboStartMontage[TEXT("YBArmed")]);
+			if (PressB)
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("YBArmed")]);
+			}
+			else if (PressLT && CurWireBugStack > 0)
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("YLTArmed")]);
+			}
+			else if (!PressLT)
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("YArmed")]);
+			}
 		}
-		else if (PressLT && CurWireBugStack > 0)
+
+		else if (WeaponType == EWeaponType::Unarmed)
 		{
-			PlayAnimMontage(ComboStartMontage[TEXT("YLTArmed")]);
-		}
-		else if(!PressLT)
-		{
-			PlayAnimMontage(ComboStartMontage[TEXT("YArmed")]);
+			if (!PressLT && PressWASD)
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("YWASDUnarmed")]);
+			}
+			else if (PressLT && CurWireBugStack > 0)
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("YLTUnarmed")]);
+			}
 		}
 	}
 
-	else if (WeaponType == EWeaponType::Unarmed)
-	{
-		if (!PressLT && PressWASD)
-		{
-			PlayAnimMontage(ComboStartMontage[TEXT("YWASDUnarmed")]);
-		}
-		else if (PressLT && CurWireBugStack > 0)
-		{
-			PlayAnimMontage(ComboStartMontage[TEXT("YLTUnarmed")]);
-		}
-	}
+
 }
 
 void AMH_PlayerCharacter::ComboStartRT()
 {
 	PressRTOn();
 
-	if (!(GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()))
+	if (GetMesh()->GetAnimInstance()->IsAnyMontagePlaying())
+	{
+		return;
+	}
+
+
+	if (UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>())
 	{
 		PlayAnimMontage(ComboStartMontage[TEXT("RT")]);
 	}
+
 }
 
 void AMH_PlayerCharacter::ComboStartB()
 {
 	PressBOn();
 
-	if (!(GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()) && WeaponType == EWeaponType::Armed)
+	if (!(GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()) && WeaponType == EWeaponType::GreatSwdArmed)
 	{
 		PlayAnimMontage(ComboStartMontage[TEXT("BArmed")]);
 	}
@@ -335,7 +287,6 @@ void AMH_PlayerCharacter::ComboStartB()
 		Rot.Yaw -= 90.0;
 
 		SetActorRotation(Rot);
-
 	}
 }
 
@@ -344,205 +295,98 @@ void AMH_PlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	KeyPressCheck();
-	ValutCheck();
-	MakeFalling();
+//	ValutCheck();
+//	MakeFalling();
+
+
+	BuffTimer += GetWorld()->DeltaTimeSeconds;
 
 	OpacityFloatTimeline.TickTimeline(DeltaTime);
 }
 
 void AMH_PlayerCharacter::KeyPressCheck()
 {
-	// KeyArray Set
-
-	while (KeyArray.Num() < 20)
-	{
-		KeyArray.Push(false);
-	}
-
-	KeyArray[0] = true;
-	KeyArray[1] = PressLT && PressY && (CurWireBugStack > 0 ? true : false);
-	KeyArray[2] = PressLT && PressB && (CurWireBugStack > 0 ? true : false);
-	KeyArray[3] = PressY && PressB;
-	KeyArray[4] = PressY && PressWASD;
-	KeyArray[5] = PressY;
-	KeyArray[6] = !PressY;
-	KeyArray[7] = PressB;
-	KeyArray[8] = !PressB;
-	KeyArray[9] = PressA;	
-	KeyArray[10] = GetCharacterMovement()->IsMovingOnGround();
-	KeyArray[11] = WeaponType == EWeaponType::Armed ? true : false;
-	KeyArray[12] = WeaponType == EWeaponType::Unarmed ? true : false;
-	KeyArray[13] = PressLT && PressA;
-	KeyArray[14] = PressWASD;
-	KeyArray[15] = AtkOncePerMonta;
-	KeyArray[16] = PressRT;
-	KeyArray[17] = !PressRT;	
-	//18, 19 는 Valut Check 중에
-	KeyArray[20] = !PressRB;
-
-
-	// KeyDirInt Set
-	KeyDirInt = 0;
-
-	if(PressWASD)
-	{
-		if		(KeyDir > -45.0f && KeyDir <= 45.0f)	KeyDirInt = 0;
-		else if (KeyDir > -135.0f && KeyDir <= -45.0f)	KeyDirInt = 3;
-		else if (KeyDir > 45.0f && KeyDir <= 135.0f)	KeyDirInt = 1;
-		else											KeyDirInt = 2;	
-	}
+	KeyArray[EKeyInfo::Default] = true;
+	KeyArray[EKeyInfo::LT_Y] = PressLT && PressY && (CurWireBugStack > 0 ? true : false);
+	KeyArray[EKeyInfo::LT_B] = PressLT && PressB && (CurWireBugStack > 0 ? true : false);
+	KeyArray[EKeyInfo::Y_B] = PressY && PressB;
+	KeyArray[EKeyInfo::WASD_Y] = PressY && PressWASD;
+	KeyArray[EKeyInfo::Y] = PressY;
+	KeyArray[EKeyInfo::Release_Y] = !PressY;
+	KeyArray[EKeyInfo::B] = PressB;
+	KeyArray[EKeyInfo::Release_B] = !PressB;
+	KeyArray[EKeyInfo::Space] = PressA;
+	KeyArray[EKeyInfo::MovingOnGround] = GetCharacterMovement()->IsMovingOnGround();
+	KeyArray[EKeyInfo::HoldingWeapon] = WeaponType == EWeaponType::GreatSwdArmed ? true : false;
+	KeyArray[EKeyInfo::Unarmed] = WeaponType == EWeaponType::Unarmed ? true : false;
+	KeyArray[EKeyInfo::LT_A] = PressLT && PressA;
+	KeyArray[EKeyInfo::WASD] = PressWASD;
+	KeyArray[EKeyInfo::HuntingEdgeHit] = AtkOncePerMonta;
+	KeyArray[EKeyInfo::RT] = PressRT;
+	KeyArray[EKeyInfo::Release_RT] = !PressRT;
+	KeyArray[EKeyInfo::NearWall] = PlayerValutComponent->IsNearWall();
+	KeyArray[EKeyInfo::NotNearWall] = !PlayerValutComponent->IsNearWall();
+	KeyArray[EKeyInfo::Release_RB] = !PressRB;
 }
 
 void AMH_PlayerCharacter::MakeFalling()
 {
-	bool ShouldFall =    (!GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()) 
-					  && (!GetCharacterMovement()->IsMovingOnGround()) 
-				      && (WeaponType == EWeaponType::Unarmed);
+	UE_LOG(LogTemp, Log, TEXT("MakeFalling Called"));
+
+
+	bool ShouldFall = (WeaponType == EWeaponType::Unarmed) 
+					&& !(GetMesh()->GetAnimInstance()->IsAnyMontagePlaying());
 	
-	if (!ShouldFall)
+	if (ShouldFall)
 	{
-		return;
-	}
-
-	if (PressRB)
-	{
-		if (ComboStartMontage.Contains(TEXT("RunFall")))
+		if (PressRB)
 		{
-			PlayAnimMontage(ComboStartMontage[TEXT("RunFall")]);
-		}
-	}
-	else
-	{
-		if (ComboStartMontage.Contains(TEXT("WalkFall")))
-		{
-			PlayAnimMontage(ComboStartMontage[TEXT("WalkFall")]);
-		}
-	}
-
-}
-
-void AMH_PlayerCharacter::ValutCheck()
-{
-	GetFrontObjectLocation();
-
-	bool CanPlayVaultMontage =
-		(
-			DistanceToWall > 0.0f &&
-			DistanceToWall <= 100.0f &&
-			Busy == false &&
-			!GetCharacterMovement()->IsFalling() &&
-			WeaponType == EWeaponType::Unarmed&&
-			LevelType == ELevelType::Field
-		);
-
-	if (CanPlayVaultMontage)
-	{
-		PlayValutMontatge();
-	}
-}
-
-void AMH_PlayerCharacter::GetFrontObjectLocation()
-{
-	FVector TraceStart = GetActorLocation() - FVector(0, 0, 30);
-	FVector TraceEnd = TraceStart + GetActorRightVector() * 100;
-	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypeArray;
-	ObjectTypeArray.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
-	TArray<TObjectPtr<AActor>> IgnoreActors;
-	FHitResult TraceResult;
-
-	UKismetSystemLibrary::SphereTraceSingleForObjects	(
-		GetWorld(), 
-		TraceStart, 
-		TraceEnd, 
-		10.0f, 
-		ObjectTypeArray, 
-		false, 
-		IgnoreActors, 
-		EDrawDebugTrace::None, 
-		TraceResult, 
-		true
-	);
-	
-	KeyArray[18] = TraceResult.bBlockingHit;
-	KeyArray[19] = !TraceResult.bBlockingHit;
-
-	if (TraceResult.bBlockingHit)
-	{
-		ImpactNormal		= TraceResult.ImpactNormal;
-		WallRotZ			= TraceResult.ImpactNormal.ToOrientationRotator().Yaw +90.0f;
-		WallSlope			= UKismetMathLibrary::DegAcos(FVector::DotProduct(TraceResult.ImpactNormal, GetActorUpVector()));
-		InitialImpactPoint  = TraceResult.ImpactPoint;
-		DistanceToWall		= FVector::Distance(GetActorLocation(), InitialImpactPoint);
-		GetObjectDimension();
-	}
-	else
-	{
-		InitialImpactPoint = FVector(0, 0, 0);
-		DistanceToWall = 0.0;
-		CanWallRun = false;
-	}
-}
-
-void AMH_PlayerCharacter::GetObjectDimension()
-{
-	const uint8 LastIndex = 30;
-	uint8 CurIndex = 0;
-
-	for (; CurIndex <= LastIndex; CurIndex++)
-	{
-		FVector TraceStart =  InitialImpactPoint;
-		TraceStart.Z += CurIndex * 15;
-
-		FVector TraceEnd = TraceStart + GetActorRightVector() * 150;
-		TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypeArray;
-		ObjectTypeArray.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
-		TArray<TObjectPtr<AActor>> IgnoreActors;
-		FHitResult TraceResult;
-
-		UKismetSystemLibrary::LineTraceSingleForObjects	(
-			GetWorld(),
-			TraceStart,
-			TraceEnd,
-			ObjectTypeArray,
-			false,
-			IgnoreActors,
-			EDrawDebugTrace::None,
-			TraceResult,
-			true
-		);
-
-		if (TraceResult.bBlockingHit)
-		{
-			ImpactPoint = TraceResult.ImpactPoint;
+			if (ComboStartMontage.Contains(TEXT("RunFall")))
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("RunFall")]);
+			}
 		}
 		else
 		{
+			if (ComboStartMontage.Contains(TEXT("WalkFall")))
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("WalkFall")]);
+			}
+		}
+	}
+
+
+}
+
+void AMH_PlayerCharacter::PlayValutMontage(EValutMontage ValutMontage)
+{
+	if (!GetCharacterMovement()->IsFalling() &&
+		WeaponType == EWeaponType::Unarmed &&
+		LevelType == ELevelType::Field &&
+		VaultMontages.Contains(ValutMontage) &&
+		!GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()
+		)
+	{
+		switch (ValutMontage)
+		{
+		case EValutMontage::WallRun:
+			if (PressRB )
+			{
+				PlayAnimMontage(VaultMontages[ValutMontage]);
+			}
+			break;
+		case EValutMontage::JumpOver:
+			PlayAnimMontage(VaultMontages[ValutMontage]);
+			break;
+		case EValutMontage::Vault:
+			PlayAnimMontage(VaultMontages[ValutMontage]);
+			break;
+		default:
 			break;
 		}
 	}
 }
 
-void AMH_PlayerCharacter::PlayValutMontatge()
-{
-	float DistanceToVaultPoint = ImpactPoint.Z - GetActorLocation().Z;
-
-	if (DistanceToVaultPoint > 150.0f && PressRB && !GetMesh()->GetAnimInstance()->IsAnyMontagePlaying())
-	{
-		PlayAnimMontage(VaultMontages[EValutMontage::WallRun]);
-	}
-	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, 40.0f, 150.0f, false))
-	{
-		Busy = true;
-		VaultOffset = 20.0f;
-		PlayAnimMontage(VaultMontages[EValutMontage::JumpOver]);
-	}
-	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, -40.0f, 40.0f))
-	{
-		Busy = true;
-		VaultOffset = -45.0f;
-		PlayAnimMontage(VaultMontages[EValutMontage::Vault]);
-	}
-}
 
 // Called to bind functionality to input
 void AMH_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -578,9 +422,49 @@ float AMH_PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Da
 {
 	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	float SetHp = FMath::Clamp(StatComponent->GetCurrentHp() - DamageAmount, 0.0f, StatComponent->GetMaxHp());
-	StatComponent->SetCurrentHp(SetHp);
+	if (DamageTakeType == EDamageTakeType::Evade)
+	{
+		return DamageAmount;
+	}
 
+
+	if (DamageTakeType == EDamageTakeType::Default)
+	{
+		const UMHBasicDamageType* CustomDamageType = Cast<UMHBasicDamageType>(DamageEvent.DamageTypeClass->GetDefaultObject());
+		if (CustomDamageType)
+		{
+			if (CustomDamageType->DamageTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("DamageType.Roar"))))
+			{
+				UE_LOG(LogTemp, Log, TEXT("RoarAttack!"));
+
+				if (ComboStartMontage.Contains(TEXT("Roar")))
+				{
+					PlayAnimMontage(ComboStartMontage[TEXT("Roar")]);
+				}
+			}
+		}
+		else
+		{
+			if (ComboStartMontage.Contains(TEXT("Damaged")))
+			{
+				PlayAnimMontage(ComboStartMontage[TEXT("Damaged")]);
+			}
+			float SetHp = FMath::Clamp(StatComponent->GetCurrentHp() - DamageAmount, 0.0f, StatComponent->GetMaxHp() + StatComponent->GetMaxHpModifier());
+			StatComponent->SetCurrentHp(SetHp);
+		}
+	}
+	// DamageTakeType == Tackle, Gaurd
+	else 
+	{
+		float SetHp = FMath::Clamp(StatComponent->GetCurrentHp() - (DamageAmount * 0.3f), 0.0f, StatComponent->GetMaxHp() + StatComponent->GetMaxHpModifier());
+		StatComponent->SetCurrentHp(SetHp);
+
+		//UNiagaraSystem* GaurdVFX = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Script/Niagara.NiagaraSystem'/Game/MarketContent/SlashHitAndStabHit/Particles/Niagara/NS_ky_stabHit08.NS_ky_stabHit08'"));
+		//if (GaurdVFX)
+		//{
+		//	UNiagaraFunctionLibrary::SpawnSystemAttached(GaurdVFX, Gswd, TEXT("None"), FVector(0, 0, 0), FRotator(0, 0, 0), EAttachLocation::KeepRelativeOffset, true);
+		//}
+	}
 	return DamageAmount;
 }
 
@@ -593,37 +477,6 @@ void AMH_PlayerCharacter::StartHitStop(float Time)
 
 }
 
-void AMH_PlayerCharacter::StopCharge()
-{
-	FTimerHandle TimeHandle;
-	GetWorld()->GetTimerManager().SetTimer(TimeHandle, this, &AMH_PlayerCharacter::StopChargeCallback, 2.0, false);
-
-}
-
-void AMH_PlayerCharacter::StopChargeCallback()
-{
-	SwdFlameEffect->SetActive(false);
-	BodyFlameEffect->SetActive(false);
-	OverlayMaterialDynamicInstance->SetScalarParameterValue(TEXT("Opacity"), 0.0);
-	ChargeStep = 0;
-}
-
-void AMH_PlayerCharacter::SwdAttachToSocket(FName socketName)
-{
-	bool isValidSocket = GetMesh()->DoesSocketExist(socketName);
-	if (isValidSocket)
-	{
-		Gswd->AttachToComponent(GetMesh(), FAttachmentTransformRules(EAttachmentRule::KeepRelative, true), socketName);
-		if (socketName == TEXT("B_Weapon"))
-		{
-			WeaponType = EWeaponType::Unarmed;
-		}
-		else if (socketName == TEXT("L_Weapon"))
-		{
-			WeaponType = EWeaponType::Armed;
-		}
-	}	
-}
 
 void AMH_PlayerCharacter::CameraShake(bool IsStrong)
 {
@@ -637,41 +490,16 @@ void AMH_PlayerCharacter::CameraShake(bool IsStrong)
 	}
 
 }
-void AMH_PlayerCharacter::GSwdFstCharge()
-{
-	OpacityFloatTimeline.PlayFromStart();
-	OverlayMaterialDynamicInstance->SetVectorParameterValue(TEXT("Color"), FVector4(50.0, 8.0, 8.0));
-
-	ChargeStep = 1;
-}
-
-void AMH_PlayerCharacter::GSwdSndCharge()
-{
-	OpacityFloatTimeline.PlayFromStart();
-	OverlayMaterialDynamicInstance->SetVectorParameterValue(TEXT("Color"), FVector4(50.0, 8.0, 1.3));
-	ChargeStep = 2;
-}
-
-void AMH_PlayerCharacter::GSwdTrdCharge()
-{
-	OpacityFloatTimeline.PlayFromStart();
-	OverlayMaterialDynamicInstance->SetVectorParameterValue(TEXT("Color"), FVector4(19.5, 50.0, 50.0));
-
-	BodyFlameEffect->SetActive(true);
-	SwdFlameEffect->SetActive(true);
-
-	// ChargeEndVFX
-	UNiagaraSystem* ChargeEndVFX = LoadObject<UNiagaraSystem>(nullptr, TEXT("/Script/Niagara.NiagaraSystem'/Game/MarketContent/SlashHitAndStabHit/Particles/Niagara/NS_ky_stabHit08.NS_ky_stabHit08'"));
-	if (ChargeEndVFX)
-	{
-		UNiagaraFunctionLibrary::SpawnSystemAttached(ChargeEndVFX, Gswd, TEXT("None"), FVector(0, 0, 0), FRotator(0, 0, 0), EAttachLocation::KeepRelativeOffset, true);
-	}
-
-	ChargeStep = 3;
-}
 
 void AMH_PlayerCharacter::TurnOnBuffEffect()
 {
+	if (!BuffEffect->IsActive())
+	{
+		BuffEffect->SetActive(true);
+		StatComponent->SetAtkModifier((StatComponent->GetAtk() * 0.1f) + (StatComponent->GetAtkModifier()));
+	}
+
+
 }
 
 void AMH_PlayerCharacter::ManualMoveBegin()
@@ -693,16 +521,10 @@ void AMH_PlayerCharacter::ManualMoveTick(float ManualMoveSpeed, float ManualMove
 		AddActorWorldOffset(DeltaMove);
 
 		// 벽에 닿았다면 착 달라붙기
-		if (WallRun && !InitialImpactPoint.IsZero())
+		if (WallRun)
 		{
-			FVector HitPoint = (GetActorRightVector() * -50) + InitialImpactPoint;
-			HitPoint.Z = GetActorLocation().Z;
-			SetActorLocation(HitPoint);
-
-			FVector RotVector = FVector(ImpactNormal.X, ImpactNormal.Y, 0.0);			
-			FRotator Rot = RotVector.ToOrientationRotator();
-			Rot.Yaw += 90.0f;
-			SetActorRotation(Rot);			
+			PlayerValutComponent->MakePlayerStickToWall();
+		
 		}
 	}
 	// 상승 시간 이후에는 자유 낙하 (무중력 상태 해제)
@@ -751,7 +573,6 @@ void AMH_PlayerCharacter::ShootWirebugEnd()
 
 void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage>> MontageMap, FName SectionName)
 {
-	uint8 ArrayIndex = 0;
 	UAnimMontage* ComboMontage = nullptr;
 
 	if (MontageMap.IsEmpty())
@@ -759,22 +580,21 @@ void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage
 		return;
 	}
 
-	for (; ArrayIndex < KeyArray.Num(); ArrayIndex++)
+	for (TPair<EKeyInfo, bool> key : KeyArray)
 	{
-		if (!KeyArray[ArrayIndex])
+		if (!key.Value)
 		{
 			continue;
 		}
 
-		if (MontageMap.Contains((EKeyInfo)ArrayIndex))
+		if (MontageMap.Contains(key.Key))
 		{
-			ComboMontage = MontageMap[(EKeyInfo)ArrayIndex];
-			break;
+			ComboMontage = MontageMap[key.Key];
 		}
 	}
 
 
-	if (ArrayIndex == (uint8)EKeyInfo::Space && WeaponType == EWeaponType::Armed)
+	if (KeyArray[EKeyInfo::Space] && WeaponType == EWeaponType::GreatSwdArmed)
 	{
 		PlayAnimMontage(RollMontages[KeyDirInt]);
 		return;
@@ -788,10 +608,12 @@ void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage
 
 
 	PlayAnimMontage(ComboMontage);
-
 	if (!SectionName.IsNone())
 	{
-		GetMesh()->GetAnimInstance()->Montage_JumpToSection(SectionName);
+		if (GetMesh()->GetAnimInstance()->GetCurrentActiveMontage()->IsValidSectionName(SectionName))
+		{
+			GetMesh()->GetAnimInstance()->Montage_JumpToSection(SectionName);
+		}		
 	}
 	
 }
@@ -800,7 +622,11 @@ void AMH_PlayerCharacter::ComboEnd(bool IsChargeAtk)
 {
 	if (IsChargeAtk)
 	{
-		StopCharge();
+		UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>();
+		if (GreatSwordComponent)
+		{
+			GreatSwordComponent->StopCharge();
+		}
 	}
 
 }
@@ -849,6 +675,7 @@ void AMH_PlayerCharacter::AttackTick(FName AtkStartSocket, FName AtkEndSocket, f
 	bool IsCriticalHit = false;
 	const float Damage = StatComponent->CaculateDamage(AtkData->DamageMul, IsCriticalHit);
 
+	
 
 	// Apply Damage
 	UGameplayStatics::ApplyPointDamage(TraceResult.GetActor(),Damage,TraceResult.Location,TraceResult,GetController(),this, nullptr);
@@ -879,6 +706,29 @@ void AMH_PlayerCharacter::AttackTick(FName AtkStartSocket, FName AtkEndSocket, f
 	}
 }
 
+void AMH_PlayerCharacter::DamageTakeBegin(EDamageTakeType DmgTakeType)
+{
+	DamageTakeType = DmgTakeType;
+}
+
+void AMH_PlayerCharacter::DamageTakeEnd()
+{
+	DamageTakeType = EDamageTakeType::Default;
+}
+
+void AMH_PlayerCharacter::ValutBegin(float Offset)
+{
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Flying);
+
+	const float Delta = PlayerValutComponent->GetWallDimensionZ() - GetActorLocation().Z - Offset;
+	AddActorWorldOffset(FVector(0, 0, Delta));
+}
+
+void AMH_PlayerCharacter::ValutEnd()
+{
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+}
+
 void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)
 {
 	UE_LOG(LogTemp, Log, TEXT("SetupCharacterWidget Called"));
@@ -898,10 +748,24 @@ void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)
 
 }
 
-void AMH_PlayerCharacter::OpacityUpdate(float Opcity)
-{
-	OverlayMaterialDynamicInstance->SetScalarParameterValue(TEXT("Opacity"), Opcity);
+void AMH_PlayerCharacter::SetPlayerState(EWeaponType Type)
+{	
+	WeaponType = Type;
 }
+
+void AMH_PlayerCharacter::AttachGreatSwdComponent()
+{
+	UMHGreatSwordComponent* GreatSwordComponent = NewObject<UMHGreatSwordComponent>(this);
+	if (GreatSwordComponent)
+	{
+		// 컴포넌트를 소유한 액터에 추가
+		GreatSwordComponent->RegisterComponent();						
+
+		UE_LOG(LogTemp, Log, TEXT("Custom ActorComponent added dynamically!"));
+	}
+}
+
+
 
 void AMH_PlayerCharacter::SwitchAtkMode()
 {

@@ -2,18 +2,22 @@
 
 
 #include "Character/Notify/AN_GswdChargeSnd.h"
-#include "Interface/MH_AnimNotifyInterface.h"
+#include "Interface/MH_GswdNotifyInterface.h"
 
 void UAN_GswdChargeSnd::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
-	if (MeshComp)
+	check(MeshComp);
+
+	TArray<UActorComponent*> Components;
+	MeshComp->GetOwner()->GetComponents(Components);
+
+	for (UActorComponent* Component : Components)
 	{
-		IMH_AnimNotifyInterface* CharacterPlayer = Cast<IMH_AnimNotifyInterface>(MeshComp->GetOwner());
-		if (CharacterPlayer)
+		if (IMH_GswdNotifyInterface* Interface = Cast<IMH_GswdNotifyInterface>(Component))
 		{
-			CharacterPlayer->GSwdSndCharge();
+			Interface->GSwdSndCharge();
 		}
 	}
 }

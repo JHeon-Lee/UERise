@@ -2,18 +2,22 @@
 
 
 #include "Character/Notify/ANS_SwdSocketB.h"
-#include "Interface/MH_AnimNotifyInterface.h"
+#include "Interface/MH_GswdNotifyInterface.h"
 
 void UANS_SwdSocketB::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
-	if (MeshComp)
+	check(MeshComp);
+
+	TArray<UActorComponent*> Components; 
+	MeshComp->GetOwner()->GetComponents(Components);
+
+	for (UActorComponent* Component : Components)
 	{
-		IMH_AnimNotifyInterface* CharacterPlayer = Cast<IMH_AnimNotifyInterface>(MeshComp->GetOwner());
-		if (CharacterPlayer)
+		if (IMH_GswdNotifyInterface* Interface = Cast<IMH_GswdNotifyInterface>(Component))
 		{
-			CharacterPlayer->SwdAttachToSocket(SocketName);
+			Interface->SwdAttachToSocket(SocketName);
 		}
 	}
 }

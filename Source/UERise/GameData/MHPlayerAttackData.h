@@ -9,6 +9,7 @@ struct FMHPlayerAttackData : public FTableRowBase
 	GENERATED_BODY()
 
 public:
+	FMHPlayerAttackData() :Description(TEXT("")), DamageMul(0.0f), PartAtkDamageMul(0.0f), HitStopTime(0.0f), CAMShakePower(1) {}
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FString Description;

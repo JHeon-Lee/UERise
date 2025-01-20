@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 #include "Interface/MH_AnimNotifyInterface.h"
+#include "GameData/MHGlobalEnum.h"
 #include "ANS_AnimCombo.generated.h"
 
 /**

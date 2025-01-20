@@ -37,7 +37,7 @@ void UMHAnimInstancePlayer::NativeUpdateAnimation(float DeltaSeconds)
 
 //	IMHCharacterGetterInterface* CharacterPlayer = Cast<IMHCharacterGetterInterface>(Owner);
 	if (A_Utusi)
-	{
+	{		
 		bPressWASD = A_Utusi->PressWASD;
 		bPressRB = A_Utusi->PressRB;
 		bPressA = A_Utusi->PressA;

@@ -4,34 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "GameData/MHGlobalEnum.h"
 #include "MH_AnimNotifyInterface.generated.h"
-
-/**키 입력 정보 Enum*/
-UENUM(BlueprintType)
-enum class EKeyInfo : uint8
-{
-	Default			UMETA(DisplayName = "Default"),
-	LT_Y			UMETA(DisplayName = "LT+Y"),
-	LT_B			UMETA(DisplayName = "LT+B"),
-	Y_B				UMETA(DisplayName = "Y+B"),
-	WASD_Y			UMETA(DisplayName = "WASD+Y"),
-	Y				UMETA(DisplayName = "Y"),
-	Release_Y		UMETA(DisplayName = "Release_Y"),
-	B				UMETA(DisplayName = "B"),
-	Release_B		UMETA(DisplayName = "Release_B"),
-	Space			UMETA(DisplayName = "Space"),
-	MovingOnGround	UMETA(DisplayName = "MovingOnGround"),
-	HoldingWeapon	UMETA(DisplayName = "HoldingWeapon"),
-	Unarmed			UMETA(DisplayName = "Unarmed"),
-	LT_A			UMETA(DisplayName = "LT_A"),
-	WASD			UMETA(DisplayName = "WASD"),
-	HuntingEdgeHit	UMETA(DisplayName = "HuntingEdgeHit"),
-	RT				UMETA(DisplayName = "RT"),
-	Release_RT		UMETA(DisplayName = "Release_RT"),
-	NearWall		UMETA(DisplayName = "NearWall"),
-	NotNearWall		UMETA(DisplayName = "NotNearWall"),
-	Release_RB		UMETA(DisplayName = "Release_RB")
-};
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
@@ -49,16 +23,9 @@ class UERISE_API IMH_AnimNotifyInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	virtual void SwdAttachToSocket(FName socketName) = 0;
-
-	virtual void CameraShake(bool IsStrong = false) = 0;
-
-	virtual void GSwdFstCharge() = 0;
-	virtual void GSwdSndCharge() = 0;
-	virtual void GSwdTrdCharge() = 0;
-
 	virtual void TurnOnBuffEffect() = 0;
 
+	virtual void CameraShake(bool IsStrong = false) = 0;
 
 	virtual void ManualMoveBegin() = 0;
 	virtual void ManualMoveTick(float ManualMoveSpeed, float ManualMoveZSpeed, float FlymodeTime, bool WallRun) = 0;
@@ -73,5 +40,11 @@ public:
 
 	virtual void AttackBegin() = 0;
 	virtual void AttackTick(FName AtkStartSocket, FName AtkEndSocket, float AtkRadius) = 0;
+
+	virtual void DamageTakeBegin(EDamageTakeType DmgTakeType) = 0;
+	virtual void DamageTakeEnd() = 0;
+
+	virtual void ValutBegin(float Offset) = 0;
+	virtual void ValutEnd() = 0;
 
 };

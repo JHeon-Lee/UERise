@@ -11,7 +11,7 @@ public class UERise : ModuleRules
         PublicIncludePaths.AddRange(new string[] { "UERise" });
 
         PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Slate", "AGRPRO",
-            "SlateCore", "Engine", "InputCore", "UMG", "HeadMountedDisplay", "EnhancedInput",  "NavigationSystem", "AIModule", "GameplayTasks", "Niagara", "GameplayCameras"});
+            "SlateCore", "Engine", "InputCore", "UMG", "HeadMountedDisplay", "EnhancedInput",  "NavigationSystem", "AIModule", "GameplayTasks", "Niagara", "GameplayCameras", "GameplayTags"});
 
     }                
 
