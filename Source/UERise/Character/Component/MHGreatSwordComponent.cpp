@@ -7,6 +7,7 @@
 #include "GameData/MHGlobalEnum.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+#include "MHGameInstance.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Particles/ParticleSystem.h"
 #include "GameFramework/Character.h"
@@ -79,6 +80,7 @@ void UMHGreatSwordComponent::BeginPlay()
 	{
 		check(OwnerCharacter->GetMesh());
 		OwnerMesh = OwnerCharacter->GetMesh();
+		OwnerAnimInstance = OwnerMesh->GetAnimInstance();
 	}
 
 	Gswd->AttachToComponent(OwnerMesh, FAttachmentTransformRules(EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, EAttachmentRule::KeepRelative, false), TEXT("B_Weapon"));
@@ -186,4 +188,32 @@ void UMHGreatSwordComponent::StopChargeCallback()
 
 void UMHGreatSwordComponent::ComboStartA()
 {
+	OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.A_GSwd"));
+}
+
+void UMHGreatSwordComponent::ComboStartY(TMap<EButtons, bool> KeyInfo, EWeaponType WeaponState, bool IsWireBugEnough)
+{
+	if (WeaponState == EWeaponType::GreatSwdArmed)
+	{
+		if (KeyInfo[EButtons::B])
+		{
+			OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.Y+B_GSwd"));
+		}
+		else if (KeyInfo[EButtons::LT] && IsWireBugEnough)
+		{
+			OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.Y+LT_GSwd"));
+		}
+		else if (!KeyInfo[EButtons::LT])
+		{
+			OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.Y_GSwd"));
+		}
+	}
+	else if (WeaponState == EWeaponType::Unarmed)
+	{
+		if (!KeyInfo[EButtons::LT] && KeyInfo[EButtons::RStick])
+		{
+			OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.Y+Move_Unarmed"));
+		}
+
+	}
 }

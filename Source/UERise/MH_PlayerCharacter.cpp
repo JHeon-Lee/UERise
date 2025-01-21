@@ -17,6 +17,7 @@
 #include "Engine/PostProcessVolume.h"
 #include "Engine/DataTable.h"
 #include "Engine/DamageEvents.h"
+#include "MHGameInstance.h"
 #include "UI/UtusiHPBarWidget.h"
 #include "UI/MHWidgetComponent.h"
 #include "NiagaraFunctionLibrary.h"
@@ -27,6 +28,7 @@
 #include "Character/Component/MHGreatSwordComponent.h"
 #include "Character/Component/MHValutComponent.h"
 #include "Character/Component/MHCharacterMovementComponent.h"
+#include "Character/Component/MHEquipmentComponent.h"
 #include "GameData/MHPlayerAttackData.h"
 #include "DamageType/MHBasicDamageType.h"
 #include "LegacyCameraShake.h"
@@ -36,12 +38,17 @@ AMH_PlayerCharacter::AMH_PlayerCharacter(const FObjectInitializer& ObjectInitial
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UMHCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
-
 	// KeyArray Initialize
 	for (uint8 Enum = static_cast<uint8>(EKeyInfo::Default); Enum < static_cast<uint8>(EKeyInfo::Max); Enum++)
 	{
 		EKeyInfo key = static_cast<EKeyInfo>(Enum);
 		KeyArray.Add(key, false);
+	}
+	// KeyButton Initialize
+	for (uint8 Enum = static_cast<uint8>(EButtons::Default); Enum < static_cast<uint8>(EButtons::Max); Enum++)
+	{
+		EButtons key = static_cast<EButtons>(Enum);
+		PressMap.Add(key, false);
 	}
 
 
@@ -60,7 +67,7 @@ void AMH_PlayerCharacter::ComponentAttach()
 	PlayerValutComponent = CreateDefaultSubobject<UMHValutComponent>(TEXT("ValutComponent"));
 	if (PlayerValutComponent)
 	{
-		PlayerValutComponent->ValutMontageDelegate.AddUObject(this, &AMH_PlayerCharacter::PlayValutMontage);
+		PlayerValutComponent->CanPlayMontageDelegate.AddUObject(this, &AMH_PlayerCharacter::PlayValutMontage);
 	}
 
 	//Camera
@@ -74,24 +81,11 @@ void AMH_PlayerCharacter::ComponentAttach()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
+	EquipmentComponent = CreateDefaultSubobject<UMHEquipmentComponent>(TEXT("EquipmentComponent"));
+
 	// Mesh Attach
 	WireBug = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WireBug"));
 	WireBug->SetupAttachment(GetMesh());
-
-	Part_Helm = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Helm"));
-	Part_Helm->SetupAttachment(GetMesh());
-
-	Part_Body = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Body"));
-	Part_Body->SetupAttachment(GetMesh());
-
-	Part_Leg = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Leg"));
-	Part_Leg->SetupAttachment(GetMesh());
-
-	Part_Arm = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Arm"));
-	Part_Arm->SetupAttachment(GetMesh());
-
-	Part_Wst = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Wst"));
-	Part_Wst->SetupAttachment(GetMesh());
 
 	BuffEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("BuffEffect"));
 	BuffEffect->SetupAttachment(GetMesh(), TEXT("R_Grip_00"));
@@ -161,7 +155,7 @@ void AMH_PlayerCharacter::URotate(const FInputActionValue& Value)
 	{
 		KeyDir = KeyDir + 360.0f;
 	}
-
+	
 	if (KeyDir > -45.0f && KeyDir <= 45.0f)	KeyDirInt = 0;
 	else if (KeyDir > -135.0f && KeyDir <= -45.0f)	KeyDirInt = 3;
 	else if (KeyDir > 45.0f && KeyDir <= 135.0f)	KeyDirInt = 1;
@@ -174,10 +168,9 @@ void AMH_PlayerCharacter::ULook(const FInputActionValue& Value)
 
 	CameraBoom->AddRelativeRotation(FRotator(-1 * LookAxisVector.Y, LookAxisVector.X, 0));
 	FRotator BoomRotate = CameraBoom->GetRelativeRotation();	
-	if (BoomRotate.Pitch < -70)
-		BoomRotate.Pitch = -70;
-	if (BoomRotate.Pitch > 70)
-		BoomRotate.Pitch = 70;
+
+	BoomRotate.Pitch = UKismetMathLibrary::ClampAngle(BoomRotate.Pitch, -70, 70);
+	
 	CameraBoom->SetRelativeRotation(BoomRotate);
 }
 
@@ -195,15 +188,13 @@ void AMH_PlayerCharacter::ComboStartA()
 	{
         if (WeaponType == EWeaponType::GreatSwdArmed)
 		{
-			PlayAnimMontage(ComboStartMontage[TEXT("AArmed")]);
-			GreatSwordComponent->ComboStartA();
+			PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.A_GSwd"));
 		}		
 	}
 
-
 	if (WeaponType == EWeaponType::Unarmed)
 	{
-		PlayAnimMontage(ComboStartMontage[TEXT("AUnarmed")]);
+		PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.A_Unarmed"));	
 	}
 
 }
@@ -217,36 +208,17 @@ void AMH_PlayerCharacter::ComboStartY()
 		return;
 	}
 
+	if (PressLT && CurWireBugStack > 0)
+	{
+		PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.Y+LT_Unarmed"));
+		return;
+	}
+
 	if (UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>())
 	{
-		if (WeaponType == EWeaponType::GreatSwdArmed)
-		{
-			if (PressB)
-			{
-				PlayAnimMontage(ComboStartMontage[TEXT("YBArmed")]);
-			}
-			else if (PressLT && CurWireBugStack > 0)
-			{
-				PlayAnimMontage(ComboStartMontage[TEXT("YLTArmed")]);
-			}
-			else if (!PressLT)
-			{
-				PlayAnimMontage(ComboStartMontage[TEXT("YArmed")]);
-			}
-		}
-
-		else if (WeaponType == EWeaponType::Unarmed)
-		{
-			if (!PressLT && PressWASD)
-			{
-				PlayAnimMontage(ComboStartMontage[TEXT("YWASDUnarmed")]);
-			}
-			else if (PressLT && CurWireBugStack > 0)
-			{
-				PlayAnimMontage(ComboStartMontage[TEXT("YLTUnarmed")]);
-			}
-		}
+		GreatSwordComponent->ComboStartY(PressMap, WeaponType, true);
 	}
+
 
 
 }
@@ -260,10 +232,9 @@ void AMH_PlayerCharacter::ComboStartRT()
 		return;
 	}
 
-
 	if (UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>())
-	{
-		PlayAnimMontage(ComboStartMontage[TEXT("RT")]);
+	{		
+		PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.RT"));
 	}
 
 }
@@ -272,9 +243,15 @@ void AMH_PlayerCharacter::ComboStartB()
 {
 	PressBOn();
 
-	if (!(GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()) && WeaponType == EWeaponType::GreatSwdArmed)
+	if (GetMesh()->GetAnimInstance()->IsAnyMontagePlaying())
 	{
-		PlayAnimMontage(ComboStartMontage[TEXT("BArmed")]);
+		return;
+	}
+
+	if (UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>())
+	{
+		PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.B_Gswd"));
+		
 	}
 
 	// Near Prop Get
@@ -295,9 +272,6 @@ void AMH_PlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	KeyPressCheck();
-//	ValutCheck();
-//	MakeFalling();
-
 
 	BuffTimer += GetWorld()->DeltaTimeSeconds;
 
@@ -327,6 +301,15 @@ void AMH_PlayerCharacter::KeyPressCheck()
 	KeyArray[EKeyInfo::NearWall] = PlayerValutComponent->IsNearWall();
 	KeyArray[EKeyInfo::NotNearWall] = !PlayerValutComponent->IsNearWall();
 	KeyArray[EKeyInfo::Release_RB] = !PressRB;
+
+	PressMap[EButtons::A] = PressA;
+	PressMap[EButtons::B] = PressB;
+	PressMap[EButtons::X] = PressX;
+	PressMap[EButtons::Y] = PressY;
+	PressMap[EButtons::LT] = PressLT;
+	PressMap[EButtons::RB] = PressRB;
+	PressMap[EButtons::RT] = PressRT;
+	PressMap[EButtons::RStick] = PressWASD;
 }
 
 void AMH_PlayerCharacter::MakeFalling()
@@ -341,50 +324,46 @@ void AMH_PlayerCharacter::MakeFalling()
 	{
 		if (PressRB)
 		{
-			if (ComboStartMontage.Contains(TEXT("RunFall")))
-			{
-				PlayAnimMontage(ComboStartMontage[TEXT("RunFall")]);
-			}
+			PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.RunFall"));
 		}
 		else
 		{
-			if (ComboStartMontage.Contains(TEXT("WalkFall")))
-			{
-				PlayAnimMontage(ComboStartMontage[TEXT("WalkFall")]);
-			}
+			PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.WalkFall"));
 		}
 	}
 
 
 }
 
-void AMH_PlayerCharacter::PlayValutMontage(EValutMontage ValutMontage)
+void AMH_PlayerCharacter::PlayValutMontage()
 {
-	if (!GetCharacterMovement()->IsFalling() &&
-		WeaponType == EWeaponType::Unarmed &&
-		LevelType == ELevelType::Field &&
-		VaultMontages.Contains(ValutMontage) &&
-		!GetMesh()->GetAnimInstance()->IsAnyMontagePlaying()
-		)
-	{
-		switch (ValutMontage)
-		{
-		case EValutMontage::WallRun:
-			if (PressRB )
-			{
-				PlayAnimMontage(VaultMontages[ValutMontage]);
-			}
-			break;
-		case EValutMontage::JumpOver:
-			PlayAnimMontage(VaultMontages[ValutMontage]);
-			break;
-		case EValutMontage::Vault:
-			PlayAnimMontage(VaultMontages[ValutMontage]);
-			break;
-		default:
-			break;
-		}
-	}
+	bool bCanPlayMontage = (!GetCharacterMovement()->IsFalling() &&	WeaponType == EWeaponType::Unarmed &&
+								LevelType == ELevelType::Field && !Busy);
+		
+	
+	PlayerValutComponent->SetCanPlayValutMontage(bCanPlayMontage);
+
+	
+	//	switch (ValutMontage)
+	//	{
+	//	case EValutMontage::WallRun:
+	//		if (PressRB && !GetMesh()->GetAnimInstance()->IsAnyMontagePlaying())
+	//		{
+	//			PlayAnimMontage(VaultMontages[ValutMontage]);
+	//		}
+	//		break;
+	//	case EValutMontage::JumpOver:
+	//		Busy = true;
+	//		PlayAnimMontage(VaultMontages[ValutMontage]);
+	//		break;
+	//	case EValutMontage::Vault:
+	//		Busy = true;
+	//		PlayAnimMontage(VaultMontages[ValutMontage]);
+	//		break;
+	//	default:
+	//		break;
+	//	}
+	
 }
 
 
@@ -727,6 +706,7 @@ void AMH_PlayerCharacter::ValutBegin(float Offset)
 void AMH_PlayerCharacter::ValutEnd()
 {
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
+	Busy = false;
 }
 
 void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)

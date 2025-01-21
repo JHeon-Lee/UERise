@@ -4,6 +4,8 @@
 #include "UObject/ObjectMacros.h"
 #include "MHGlobalEnum.generated.h"
 
+
+
 /**키 입력 정보 Enum*/
 UENUM(BlueprintType)
 enum class EKeyInfo : uint8
@@ -30,6 +32,23 @@ enum class EKeyInfo : uint8
 	NotNearWall		UMETA(DisplayName = "NotNearWall"),
 	Release_RB		UMETA(DisplayName = "Release_RB"), 
 	Max UMETA(Hidden)
+};
+
+UENUM(BlueprintType)
+enum class EButtons : uint8
+{
+	Default			UMETA(DisplayName = "Default"),
+	A				UMETA(DisplayName = "A"),
+	B				UMETA(DisplayName = "B"),
+	X				UMETA(DisplayName = "X"),
+	Y				UMETA(DisplayName = "Y"),
+	RB				UMETA(DisplayName = "RB"),
+	RT				UMETA(DisplayName = "RT"),
+	LT				UMETA(DisplayName = "LT"),
+	LB				UMETA(DisplayName = "LB"),
+	LStick			UMETA(DisplayName = "LStick"),
+	RStick			UMETA(DisplayName = "RStick"),
+	Max				UMETA(Hidden)
 };
 
 UENUM(BlueprintType)

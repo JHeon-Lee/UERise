@@ -3,6 +3,7 @@
 
 #include "Character/Component/MHValutComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "MHGameInstance.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -12,7 +13,7 @@ UMHValutComponent::UMHValutComponent()
 	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
-	PrimaryComponentTick.TickInterval = 0.05;
+	PrimaryComponentTick.TickInterval = 0.1;
 	// ...
 }
 
@@ -41,7 +42,11 @@ void UMHValutComponent::ValutCheck()
 
 	if (DistanceToWall > 0.0f && DistanceToWall <= 100.0f)
 	{
-		PlayValutMontatge();
+
+		if (CanPlayValutMontage)
+		{
+			PlayValutMontatge();
+		}
 	}
 }
 
@@ -129,20 +134,20 @@ void UMHValutComponent::PlayValutMontatge()
 {
 	float DistanceToVaultPoint = ImpactPoint.Z - GetOwner()->GetActorLocation().Z;
 
-	if (DistanceToVaultPoint > 150.0f)
-	{
-		ValutMontageDelegate.Broadcast(EValutMontage::WallRun);		
-	}
-	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, 40.0f, 150.0f, false))
-	{
-	//	VaultOffset = 20.0f;
-		ValutMontageDelegate.Broadcast(EValutMontage::JumpOver);
-	}
-	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, -40.0f, 40.0f))
-	{
-	//	VaultOffset = -45.0f;
-		ValutMontageDelegate.Broadcast(EValutMontage::Vault);
-	}
+//	if (DistanceToVaultPoint > 150.0f)
+//	{
+//		ValutMontageDelegate.Broadcast(EValutMontage::WallRun);		
+//	}
+//	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, 40.0f, 150.0f, false))
+//	{
+//	//	VaultOffset = 20.0f;
+//		ValutMontageDelegate.Broadcast(EValutMontage::JumpOver);
+//	}
+//	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, -40.0f, 40.0f))
+//	{
+//	//	VaultOffset = -45.0f;
+//		ValutMontageDelegate.Broadcast(EValutMontage::Vault);
+//	}
 
 }
 
@@ -154,7 +159,7 @@ void UMHValutComponent::MakePlayerStickToWall()
 		HitPoint.Z = GetOwner()->GetActorLocation().Z;
 		GetOwner()->SetActorLocation(HitPoint);
 
-		FVector RotVector = FVector(InitialImpactPoint.X, InitialImpactPoint.Y, 0.0);
+		FVector RotVector = FVector(ImpactNormal.X, ImpactNormal.Y, 0.0);
 		FRotator Rot = RotVector.ToOrientationRotator();
 		Rot.Yaw += 90.0f;
 		GetOwner()->SetActorRotation(Rot);

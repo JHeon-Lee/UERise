@@ -6,8 +6,10 @@
 #include "Components/ActorComponent.h"
 #include "Interface/MH_GswdNotifyInterface.h"
 #include "Components/TimelineComponent.h"
+#include "GameData/MHGlobalEnum.h"
 #include "MHGreatSwordComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnMontagePlayDelegate, UAnimMontage*);
 
 UCLASS(Blueprintable, ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class UERISE_API UMHGreatSwordComponent : public UActorComponent, public IMH_GswdNotifyInterface
@@ -40,14 +42,21 @@ public:
 	void StopChargeCallback();
 
 	void ComboStartA();
+	void ComboStartY(TMap<EButtons, bool> KeyInfo, EWeaponType WeaponState, bool IsWireBugEnough);
 
 
 	UFUNCTION()
 	void OpacityUpdate(float Opcity);
 
+public:
+	FOnMontagePlayDelegate MontagePlayDelegete;
+
 private:
 	UPROPERTY()
 	TObjectPtr<class USkeletalMeshComponent> OwnerMesh;
+
+	UPROPERTY()
+	TObjectPtr<class UAnimInstance> OwnerAnimInstance;
 
 	FTimeline OpacityFloatTimeline;
 

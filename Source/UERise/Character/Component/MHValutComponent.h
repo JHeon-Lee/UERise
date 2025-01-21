@@ -7,7 +7,7 @@
 #include "GameData/MHGlobalEnum.h"
 #include "MHValutComponent.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayValutMonate, EValutMontage);
+DECLARE_MULTICAST_DELEGATE(FOnCanPlayMonate);
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -27,11 +27,14 @@ public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-	bool IsNearWall() { return  InitialImpactPoint.IsZero(); }
+	bool IsNearWall() { return  !InitialImpactPoint.IsZero(); }
 	float GetWallDimensionZ() { return ImpactPoint.Z; }
 	void MakePlayerStickToWall();
 
-	FOnPlayValutMonate ValutMontageDelegate;
+	void SetCanPlayValutMontage(bool Can) {CanPlayValutMontage = Can;}
+
+public:
+	FOnCanPlayMonate CanPlayMontageDelegate;
 
 
 protected:	
@@ -74,5 +77,8 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	bool CanWallRun;
+
+	UPROPERTY()
+	bool CanPlayValutMontage;
 
 };

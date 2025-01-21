@@ -67,7 +67,7 @@ public:
 	void KeyPressCheck();
 	void MakeFalling();
 
-	void PlayValutMontage(EValutMontage ValutMontage);
+	void PlayValutMontage();
 
 
 	// Called to bind functionality to input
@@ -139,23 +139,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Valut")
 	TObjectPtr<class UMHValutComponent> PlayerValutComponent;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mesh")
+	TObjectPtr<class UMHEquipmentComponent> EquipmentComponent;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
 	TObjectPtr<class USkeletalMeshComponent> WireBug;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class USkeletalMeshComponent> Part_Helm;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class USkeletalMeshComponent> Part_Body;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class USkeletalMeshComponent> Part_Leg;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class USkeletalMeshComponent> Part_Arm;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
-	TObjectPtr<class USkeletalMeshComponent> Part_Wst;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
 	TObjectPtr<class UNiagaraComponent> BuffEffect;
@@ -207,6 +195,9 @@ public:
 
 	//Timeline
 	FTimeline OpacityFloatTimeline;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Key")
+	TMap<EButtons, bool> PressMap;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Key")
