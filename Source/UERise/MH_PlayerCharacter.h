@@ -25,6 +25,8 @@ public:
 
 private:
 	void ComponentAttach();
+	void Initialize();
+	
 
 public:
 	virtual void PostInitializeComponents() override;

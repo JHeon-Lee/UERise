@@ -9,8 +9,6 @@ void UMHCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
 
     EMovementMode CurrentMode = MovementMode;    
 
-    UE_LOG(LogTemp, Log, TEXT("Movement mode changed: %d -> %d"), PrevMovementMode, CurrentMode);
-
     // MovementMode Change
     switch (CurrentMode)
     {

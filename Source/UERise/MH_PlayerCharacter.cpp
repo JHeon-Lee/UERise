@@ -38,25 +38,15 @@ AMH_PlayerCharacter::AMH_PlayerCharacter(const FObjectInitializer& ObjectInitial
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UMHCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = true;
-	// KeyArray Initialize
-	for (uint8 Enum = static_cast<uint8>(EKeyInfo::Default); Enum < static_cast<uint8>(EKeyInfo::Max); Enum++)
-	{
-		EKeyInfo key = static_cast<EKeyInfo>(Enum);
-		KeyArray.Add(key, false);
-	}
-	// KeyButton Initialize
-	for (uint8 Enum = static_cast<uint8>(EButtons::Default); Enum < static_cast<uint8>(EButtons::Max); Enum++)
-	{
-		EButtons key = static_cast<EButtons>(Enum);
-		PressMap.Add(key, false);
-	}
 
+	Initialize();
 
 	ComponentAttach();
 }
 
 void AMH_PlayerCharacter::ComponentAttach()
 {
+	// Custom Movement Component
 	if (UMHCharacterMovementComponent* MovementComponent = Cast<UMHCharacterMovementComponent>(GetCharacterMovement()))
 	{
 		MovementComponent->OnMovementFallingDelegate.AddUObject(this, &AMH_PlayerCharacter::MakeFalling);
@@ -70,7 +60,10 @@ void AMH_PlayerCharacter::ComponentAttach()
 		PlayerValutComponent->CanPlayMontageDelegate.AddUObject(this, &AMH_PlayerCharacter::PlayValutMontage);
 	}
 
-	//Camera
+	// Equip Component
+	EquipmentComponent = CreateDefaultSubobject<UMHEquipmentComponent>(TEXT("EquipmentComponent"));
+
+	//Camera Component
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 450.0f;
@@ -81,7 +74,6 @@ void AMH_PlayerCharacter::ComponentAttach()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	EquipmentComponent = CreateDefaultSubobject<UMHEquipmentComponent>(TEXT("EquipmentComponent"));
 
 	// Mesh Attach
 	WireBug = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("WireBug"));
@@ -114,6 +106,22 @@ void AMH_PlayerCharacter::ComponentAttach()
 		UE_LOG(LogTemp, Log, TEXT("PlayerWidgetComponent Construct Failed"));
 	}
 	
+}
+
+void AMH_PlayerCharacter::Initialize()
+{
+	// KeyArray Initialize
+	for (uint8 Enum = static_cast<uint8>(EKeyInfo::Default); Enum < static_cast<uint8>(EKeyInfo::Max); Enum++)
+	{
+		EKeyInfo key = static_cast<EKeyInfo>(Enum);
+		KeyArray.Add(key, false);
+	}
+	// KeyButton Initialize
+	for (uint8 Enum = static_cast<uint8>(EButtons::Default); Enum < static_cast<uint8>(EButtons::Max); Enum++)
+	{
+		EButtons key = static_cast<EButtons>(Enum);
+		PressMap.Add(key, false);
+	}
 }
 
 
@@ -314,8 +322,6 @@ void AMH_PlayerCharacter::KeyPressCheck()
 
 void AMH_PlayerCharacter::MakeFalling()
 {
-	UE_LOG(LogTemp, Log, TEXT("MakeFalling Called"));
-
 
 	bool ShouldFall = (WeaponType == EWeaponType::Unarmed) 
 					&& !(GetMesh()->GetAnimInstance()->IsAnyMontagePlaying());
@@ -338,32 +344,10 @@ void AMH_PlayerCharacter::MakeFalling()
 void AMH_PlayerCharacter::PlayValutMontage()
 {
 	bool bCanPlayMontage = (!GetCharacterMovement()->IsFalling() &&	WeaponType == EWeaponType::Unarmed &&
-								LevelType == ELevelType::Field && !Busy);
+								LevelType == ELevelType::Field && PressRB);
 		
 	
 	PlayerValutComponent->SetCanPlayValutMontage(bCanPlayMontage);
-
-	
-	//	switch (ValutMontage)
-	//	{
-	//	case EValutMontage::WallRun:
-	//		if (PressRB && !GetMesh()->GetAnimInstance()->IsAnyMontagePlaying())
-	//		{
-	//			PlayAnimMontage(VaultMontages[ValutMontage]);
-	//		}
-	//		break;
-	//	case EValutMontage::JumpOver:
-	//		Busy = true;
-	//		PlayAnimMontage(VaultMontages[ValutMontage]);
-	//		break;
-	//	case EValutMontage::Vault:
-	//		Busy = true;
-	//		PlayAnimMontage(VaultMontages[ValutMontage]);
-	//		break;
-	//	default:
-	//		break;
-	//	}
-	
 }
 
 
@@ -414,7 +398,6 @@ float AMH_PlayerCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Da
 		{
 			if (CustomDamageType->DamageTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("DamageType.Roar"))))
 			{
-				UE_LOG(LogTemp, Log, TEXT("RoarAttack!"));
 
 				if (ComboStartMontage.Contains(TEXT("Roar")))
 				{
@@ -587,6 +570,7 @@ void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage
 
 
 	PlayAnimMontage(ComboMontage);
+
 	if (!SectionName.IsNone())
 	{
 		if (GetMesh()->GetAnimInstance()->GetCurrentActiveMontage()->IsValidSectionName(SectionName))
@@ -706,7 +690,7 @@ void AMH_PlayerCharacter::ValutBegin(float Offset)
 void AMH_PlayerCharacter::ValutEnd()
 {
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
-	Busy = false;
+	PlayerValutComponent->SetBusy(false);
 }
 
 void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)

@@ -30,6 +30,7 @@ public:
 	bool IsNearWall() { return  !InitialImpactPoint.IsZero(); }
 	float GetWallDimensionZ() { return ImpactPoint.Z; }
 	void MakePlayerStickToWall();
+	void SetBusy(bool IsBusy) { Busy = IsBusy; }
 
 	void SetCanPlayValutMontage(bool Can) {CanPlayValutMontage = Can;}
 
@@ -48,6 +49,13 @@ protected:
 
 
 protected:
+
+	UPROPERTY()
+	TObjectPtr<class USkeletalMeshComponent> OwnerMesh;
+
+	UPROPERTY()
+	TObjectPtr<class UAnimInstance> OwnerAnimInstance;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
 	float TargetRotation;
 
@@ -74,6 +82,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Wall Check")
 	FVector ImpactNormal;
+
+	UPROPERTY()
+	bool Busy;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "State")
 	bool CanWallRun;

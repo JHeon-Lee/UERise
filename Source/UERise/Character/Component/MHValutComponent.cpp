@@ -4,6 +4,7 @@
 #include "Character/Component/MHValutComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MHGameInstance.h"
+#include "GameFramework/Character.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 
@@ -23,7 +24,12 @@ void UMHValutComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ...
+	if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+	{
+		check(OwnerCharacter->GetMesh());
+		OwnerMesh = OwnerCharacter->GetMesh();
+		OwnerAnimInstance = OwnerMesh->GetAnimInstance();
+	}
 	
 }
 
@@ -42,8 +48,9 @@ void UMHValutComponent::ValutCheck()
 
 	if (DistanceToWall > 0.0f && DistanceToWall <= 100.0f)
 	{
+		CanPlayMontageDelegate.Broadcast();
 
-		if (CanPlayValutMontage)
+		if (CanPlayValutMontage && !Busy)
 		{
 			PlayValutMontatge();
 		}
@@ -134,20 +141,20 @@ void UMHValutComponent::PlayValutMontatge()
 {
 	float DistanceToVaultPoint = ImpactPoint.Z - GetOwner()->GetActorLocation().Z;
 
-//	if (DistanceToVaultPoint > 150.0f)
-//	{
-//		ValutMontageDelegate.Broadcast(EValutMontage::WallRun);		
-//	}
-//	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, 40.0f, 150.0f, false))
-//	{
-//	//	VaultOffset = 20.0f;
-//		ValutMontageDelegate.Broadcast(EValutMontage::JumpOver);
-//	}
-//	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, -40.0f, 40.0f))
-//	{
-//	//	VaultOffset = -45.0f;
-//		ValutMontageDelegate.Broadcast(EValutMontage::Vault);
-//	}
+	if (DistanceToVaultPoint > 150.0f && !OwnerAnimInstance->IsAnyMontagePlaying())
+	{
+		OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.WallRun"));
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, 40.0f, 150.0f, false))
+	{
+		OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.JumpOver"));
+		SetBusy(true);
+	}
+	else if (UKismetMathLibrary::InRange_FloatFloat(DistanceToVaultPoint, -40.0f, 40.0f))
+	{
+		OwnerAnimInstance->Montage_Play(FIND_MONTAGE("Character.Player.Montage.Valut"));
+		SetBusy(true);
+	}
 
 }
 
