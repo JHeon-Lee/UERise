@@ -153,8 +153,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Mesh)
 	TObjectPtr<class UParticleSystemComponent> BugEffect;
 
-
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Item)
+	TObjectPtr <class UMH_ItemManager> Inventory;
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")

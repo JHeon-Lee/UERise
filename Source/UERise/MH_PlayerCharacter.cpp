@@ -29,6 +29,7 @@
 #include "Character/Component/MHValutComponent.h"
 #include "Character/Component/MHCharacterMovementComponent.h"
 #include "Character/Component/MHEquipmentComponent.h"
+#include "Item/MH_ItemManager.h"
 #include "GameData/MHPlayerAttackData.h"
 #include "DamageType/MHBasicDamageType.h"
 #include "LegacyCameraShake.h"
@@ -105,6 +106,8 @@ void AMH_PlayerCharacter::ComponentAttach()
 	{
 		UE_LOG(LogTemp, Log, TEXT("PlayerWidgetComponent Construct Failed"));
 	}
+
+	Inventory = CreateDefaultSubobject<UMH_ItemManager>(TEXT("Inventory"));
 	
 }
 
