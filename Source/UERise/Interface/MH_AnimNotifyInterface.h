@@ -47,4 +47,6 @@ public:
 	virtual void ValutBegin(float Offset) = 0;
 	virtual void ValutEnd() = 0;
 
+	virtual void RotateTick(float InitialYaw, float MaxRotateDegree, float RotateSpeed) = 0;
+
 };

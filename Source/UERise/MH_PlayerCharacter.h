@@ -108,6 +108,8 @@ public:
 	virtual void ValutBegin(float Offset) override;
 	virtual void ValutEnd() override;
 
+	virtual void RotateTick(float InitialYaw, float MaxRotateDegree, float RotateSpeed) override;
+
 // Widget Interface Override
 	virtual void SetupCharacterWidget(class UMHUserWidget* InUserWidget) override;
 

@@ -76,7 +76,7 @@ void UMH_ItemComponent::PickUpItem(UMH_ItemManager* InventoryPick)
     if (!IsValid(InventoryPick))
     {
         return;
-    }
+    }   
 
     /* Only do for items not already in same inventory */
     if (InventoryId == InventoryPick->InventoryId)
@@ -97,7 +97,8 @@ void UMH_ItemComponent::PickUpItem(UMH_ItemManager* InventoryPick)
         ItemActor->SetOwner(InventoryOwner);
         ItemActor->SetInstigator(InventoryOwner->GetInstigator());
         OnPickup.Broadcast(InventoryPick);
-        ItemActor->Destroy();
+
+       ItemActor->Destroy();
     }
 }
 

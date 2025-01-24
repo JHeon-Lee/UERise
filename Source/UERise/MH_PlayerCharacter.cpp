@@ -561,13 +561,26 @@ void AMH_PlayerCharacter::ComboTick(TMap<EKeyInfo, TObjectPtr<class UAnimMontage
 
 	if (KeyArray[EKeyInfo::Space] && WeaponType == EWeaponType::GreatSwdArmed)
 	{
-		PlayAnimMontage(RollMontages[KeyDirInt]);
+		switch (KeyDirInt)
+		{
+		case 0: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.Roll0")); break;
+		case 1: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.Roll1")); break;
+		case 2: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.Roll2")); break;
+		case 3: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.Roll3")); break;
+		}
+
 		return;
 	}
 	
 	if(ComboMontage == SpecialMoveMontages[0])
 	{
-		PlayAnimMontage(SpecialMoveMontages[KeyDirInt]);
+		switch (KeyDirInt)
+		{
+		case 0: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.GSwdSpecial0")); break;
+		case 1: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.GSwdSpecial1")); break;
+		case 2: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.GSwdSpecial2")); break;
+		case 3: PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.GSwdSpecial3")); break;
+		}
 		return;
 	}
 
@@ -694,6 +707,28 @@ void AMH_PlayerCharacter::ValutEnd()
 {
 	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Falling);
 	PlayerValutComponent->SetBusy(false);
+}
+
+void AMH_PlayerCharacter::RotateTick(float InitialYaw, float MaxRotateDegree, float RotateSpeed)
+{
+	if (!ActionValue.IsNearlyZero())
+	{
+		float KeyDirYaw = FVector(ActionValue.X, -1 * ActionValue.Y, 0).ToOrientationRotator().Yaw;
+		KeyDirYaw += CameraBoom->GetRelativeRotation().Yaw;
+
+		float NewYaw = (UKismetMathLibrary::RInterpTo_Constant(FRotator(0, 0, GetActorRotation().Yaw),
+										                       FRotator(0, 0, KeyDirYaw),
+										                       GetWorld()->DeltaTimeSeconds,
+										                       (RotateSpeed / GetWorld()->DeltaTimeSeconds))).Yaw;
+
+		double RotatedDegree = UKismetMathLibrary::Dot_VectorVector(FRotator(0, 0, InitialYaw).Vector(), 
+																	FRotator(0, 0, NewYaw).Vector());
+		
+		if (UKismetMathLibrary::DegAcos(RotatedDegree) < MaxRotateDegree)
+		{
+			SetActorRotation(FRotator(0, 0, NewYaw));
+		}
+	}
 }
 
 void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)

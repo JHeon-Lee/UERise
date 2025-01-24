@@ -4,6 +4,7 @@
 #include "Item/MH_ItemManager.h"
 #include "Item/MH_ItemComponent.h"
 #include "GameFramework/PlayerState.h"
+#include "Components/SphereComponent.h"
 #include "Kismet/KismetArrayLibrary.h"
 #include "Kismet/KismetGuidLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -26,14 +27,11 @@ void UMH_ItemManager::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InventoryStorage = nullptr;
-
 	if (!InventoryId.IsValid())
 	{
 		InventoryId = FGuid::NewGuid();
 	}
 
-    SetupInventoryStorageReference();
 }
 
 // Called every frame
@@ -64,26 +62,56 @@ bool UMH_ItemManager::AddItemsOfClass(const TSubclassOf<AActor> Class, const int
 	{
 		return false;
 	}
+    
+    AActor* ItemActor = nullptr;
 
-	TArray<AActor*> ItemArray;
-	if (GetAllItemsOfClass(Class, ItemArray))
+    // Already has Item
+	if (GetItemOfClass(Class, ItemActor))
 	{
-		for (AActor* ItemActor : ItemArray)
-		{
-			UMH_ItemComponent* ItemComponent = IsValid(ItemActor) ? 
-				Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
-			
-			if (IsValid(ItemComponent))
-			{
-                ItemComponent->CurrentStack += Quantity;
+	    UMH_ItemComponent* ItemComponent = IsValid(ItemActor) ? 
+	    	Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
+	    
+	    if (IsValid(ItemComponent))
+	    {
+           ItemComponent->CurrentStack += Quantity;
 
-                OnItemUpdated.Broadcast(ItemActor);
-                return true;
-			}
-		}
+           OnItemUpdated.Broadcast(ItemActor);
+           return true;
+	    }
 	}
+    // Add New
+    else
+    {
+        const AActor* ItemCDO = Cast<AActor>(Class->StaticClass()->GetDefaultObject());
+        FTransform NewTransform = GetOwner()->GetActorTransform();
+        NewTransform.SetScale3D(IsValid(ItemCDO) ? ItemCDO->GetActorScale() : FVector::OneVector);
+        AActor* NewItemActor = GetWorld()->SpawnActor(Class, &NewTransform);      
 
-	return true;
+
+        if (IsValid(NewItemActor))
+        {
+            UE_LOG(LogTemp, Log, TEXT("Add new Valid Items Of Class"));
+
+            UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(NewItemActor->GetRootComponent());
+            if (IsValid(PrimitiveComponent))
+            {
+                PrimitiveComponent->SetSimulatePhysics(false);
+            }
+            NewItemActor->SetActorHiddenInGame(true);
+            NewItemActor->SetActorEnableCollision(false);
+
+            InventoryStorage.Add(NewItemActor);
+            OnItemUpdated.Broadcast(NewItemActor);
+            return true;
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("Add new Valid Items Of Class Failed"));
+            return false;
+        }
+    }
+
+	return false;
 }
 
 bool UMH_ItemManager::RemoveItemsOfClass(const TSubclassOf<AActor> Class, const int32 Quantity)
@@ -101,20 +129,9 @@ bool UMH_ItemManager::RemoveItemsOfClass(const TSubclassOf<AActor> Class, const 
         return false;
     }
 
-    TArray<AActor*> ItemArray;
-    if (!GetAllItemsOfClass(Class, ItemArray))
+    AActor* ItemActor;
+    if (GetItemOfClass(Class, ItemActor))
     {
-        return false;
-    }
-
-    for (int32 i = ItemArray.Num() - 1; i >= 0; --i)
-    {
-        AActor* ItemActor = ItemArray[i];
-        if (!IsValid(ItemActor))
-        {
-            continue;
-        }
-
         UMH_ItemComponent* ItemComponent = Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass()));
 
         if (IsValid(ItemComponent))
@@ -130,34 +147,30 @@ bool UMH_ItemManager::RemoveItemsOfClass(const TSubclassOf<AActor> Class, const 
             }
         }
     }
-    return true;
+
+    return false;
 }
 
 TArray<AActor*> UMH_ItemManager::GetAllItems()
 {
-    TArray<AActor*> Items;
-
-    SetupInventoryStorageReference();
-
-    if (!IsValid(InventoryStorage))
-    {
-        return Items;
-    }
-
-    InventoryStorage->GetAttachedActors(Items, true);
-
-    return Items;
+    return InventoryStorage;
 }
 
-bool UMH_ItemManager::GetAllItemsOfClass(const TSubclassOf<AActor> Class, TArray<AActor*>& OutFilteredArray)
+bool UMH_ItemManager::GetItemOfClass(const TSubclassOf<AActor> Class, AActor*& ItemActor)
 {
-	TArray<AActor*> FilteredArray;
-	UKismetArrayLibrary::FilterArray(GetAllItems(), Class, FilteredArray);
-	if (FilteredArray.Num() > 0)
-	{
-		OutFilteredArray = FilteredArray;
-		return true;
-	}
+    if (InventoryStorage.IsEmpty())
+    {
+        return false;
+    }
+
+    for (const auto& Actor : InventoryStorage)
+    {
+        if (IsValid(Actor) && Actor->IsA(Class))
+        {
+            ItemActor = Actor;
+            return true;
+        }
+    }
 
 	return false;
 }
@@ -169,50 +182,48 @@ bool UMH_ItemManager::HasEnoughItems(const TSubclassOf<AActor> Item, const int32
         return false;
     }
 
-    TArray<AActor*> ItemArray;
-    if (!GetAllItemsOfClass(Item, ItemArray))
+    AActor* ItemActor;
+    if (!GetItemOfClass(Item, ItemActor))
     {
         return false;
     }
 
-    for (int32 i = 0; i < ItemArray.Num(); ++i)
+    UMH_ItemComponent* ItemComponent = IsValid(ItemActor) ?
+        Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
+
+    if (!ensure(IsValid(ItemComponent)))
     {
-        const AActor* ItemActor = ItemArray[i];
+        return false;
+    }
 
-        UMH_ItemComponent* ItemComponent = IsValid(ItemActor) ?
-            Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
-
-        if (!ensure(IsValid(ItemComponent)))
-        {
-            continue;
-        }
-
-        if (Quantity > ItemComponent->CurrentStack)
-        {
-            return true;
-        }
+    if (Quantity > ItemComponent->CurrentStack)
+    {
+        return true;
     }
 
 	return false;
 }
 
+int32 UMH_ItemManager::GetItemQuantity(const TSubclassOf<AActor> Item)
+{
+    AActor* ItemActor;
+    if (!GetItemOfClass(Item, ItemActor))
+    {
+        return -1;
+    }
+
+    UMH_ItemComponent* ItemComponent = IsValid(ItemActor) ?
+        Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
+
+    if (ItemComponent->CurrentStack > 0)
+    {
+        return ItemComponent->CurrentStack;
+    }
+
+    return -1;
+}
+
 bool UMH_ItemManager::HasExactItem(AActor* Item)
 {
     return GetAllItems().Contains(Item);
-}
-
-void UMH_ItemManager::SetupInventoryStorageReference()
-{
-    if (IsValid(InventoryStorage))
-    {
-        return;
-    }
-
-    AActor* InventoryOwner = GetOwner();
-    if (!IsValid(InventoryOwner))
-    {
-        return;
-    }
-
-    InventoryStorage = InventoryOwner;    
 }

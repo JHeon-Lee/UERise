@@ -12,12 +12,10 @@ void UMHCharacterMovementComponent::OnMovementModeChanged(EMovementMode Previous
     // MovementMode Change
     switch (CurrentMode)
     {
-    case MOVE_Walking:
-        UE_LOG(LogTemp, Log, TEXT("Now Walking"));                
+    case MOVE_Walking: 
         OnMovementWalkingDelegate.Broadcast();
         break;
     case MOVE_Falling:
-        UE_LOG(LogTemp, Log, TEXT("Now Falling"));
         OnMovementFallingDelegate.Broadcast();
         break;
     default:

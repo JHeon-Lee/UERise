@@ -14,4 +14,19 @@ class UERISE_API UANS_Rotate : public UAnimNotifyState
 {
 	GENERATED_BODY()
 	
+public:
+	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference) override;
+	virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference) override;
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Editable")
+	float RotateSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Editable")
+	float MaxRotateDegree;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float InitalYaw;
+
+
 };

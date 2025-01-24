@@ -18,6 +18,7 @@ class UERISE_API AMH_ItemBase : public AStaticMeshActor
 public:
 	AMH_ItemBase();
 
+
 private:
 	UFUNCTION()
 	void OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent,
@@ -28,6 +29,8 @@ private:
 							  const FHitResult& SweepResult);
 	
 public:
+	bool DoOnce = false;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<class UMH_ItemComponent> ItemComponent;
 

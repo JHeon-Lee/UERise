@@ -22,9 +22,6 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-    void SetupInventoryStorageReference();
-
-    bool bHasPlayerState = false;
 
 public:	
 	// Called every frame
@@ -42,10 +39,13 @@ public:
     TArray<AActor*> GetAllItems();
 
     UFUNCTION(BlueprintCallable, Category = "MH_ITEM")
-    bool GetAllItemsOfClass(const TSubclassOf<AActor> Class, TArray<AActor*>& OutFilteredArray);
+    bool GetItemOfClass(const TSubclassOf<AActor> Class, AActor*& ItemActor);
         
     UFUNCTION(BlueprintCallable, Category = "MH_ITEM")
     bool HasEnoughItems(const TSubclassOf<AActor> Item,const int32 Quantity);
+
+    UFUNCTION(BlueprintCallable, Category = "MH_ITEM")
+    int32 GetItemQuantity(const TSubclassOf<AActor> Item);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MH_ITEM")
     bool HasExactItem(AActor* Item);
@@ -55,8 +55,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, SaveGame)
     FGuid InventoryId;
 
-    UPROPERTY(BlueprintReadWrite, Replicated)
-    AActor* InventoryStorage;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+    TArray<TObjectPtr<AActor>> InventoryStorage;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     bool bDebug;

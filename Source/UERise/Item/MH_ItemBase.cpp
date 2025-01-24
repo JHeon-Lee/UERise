@@ -16,21 +16,32 @@ AMH_ItemBase::AMH_ItemBase()
 
 	SphereCollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
 	SphereCollisionComponent->InitSphereRadius(200.0f);
-	SphereCollisionComponent->SetCollisionProfileName(TEXT("OverlapAllDynamic"));
 	SphereCollisionComponent->AttachToComponent(RootComponent, FAttachmentTransformRules(EAttachmentRule::KeepRelative, false));
-	
 
 	SphereCollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &AMH_ItemBase::OnSphereBeginOverlap);
 	
 }
 
+
 void AMH_ItemBase::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	if (UMH_ItemManager* ActorInventory = FindComponentByClass<UMH_ItemManager>())
+	if (DoOnce)
 	{
-		if (IsValid(ActorInventory))
-		{
-			ItemComponent->PickUpItem(ActorInventory);
-		}		
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Sphere Overlapped, Actor : %s"), *OtherActor->GetName());
+
+	UMH_ItemManager* Inventory = OtherActor->FindComponentByClass<UMH_ItemManager>();
+
+	if (IsValid(Inventory))
+	{
+		ItemComponent->PickUpItem(Inventory);
 	}	
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("invertory not Exist"));
+	}
+
+	DoOnce = true;
 }
