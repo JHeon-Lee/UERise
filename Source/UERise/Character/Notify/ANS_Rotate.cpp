@@ -22,6 +22,7 @@ void UANS_Rotate::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase
 
 	if (MeshComp)
 	{
+
 		IMH_AnimNotifyInterface* CharacterPlayer = Cast<IMH_AnimNotifyInterface>(MeshComp->GetOwner());
 		if (CharacterPlayer)
 		{

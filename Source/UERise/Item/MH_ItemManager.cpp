@@ -75,6 +75,8 @@ bool UMH_ItemManager::AddItemsOfClass(const TSubclassOf<AActor> Class, const int
 	    {
            ItemComponent->CurrentStack += Quantity;
 
+           UE_LOG(LogTemp, Log, TEXT("Add Item Of Class : %s, Current Stack : %d "), *ItemActor->GetName(), ItemComponent->CurrentStack);
+
            OnItemUpdated.Broadcast(ItemActor);
            return true;
 	    }
@@ -83,14 +85,14 @@ bool UMH_ItemManager::AddItemsOfClass(const TSubclassOf<AActor> Class, const int
     else
     {
         const AActor* ItemCDO = Cast<AActor>(Class->StaticClass()->GetDefaultObject());
-        FTransform NewTransform = GetOwner()->GetActorTransform();
-        NewTransform.SetScale3D(IsValid(ItemCDO) ? ItemCDO->GetActorScale() : FVector::OneVector);
+        FTransform NewTransform = FTransform(FRotator(0, 0, 0), FVector(0, 0, -500), FVector(1, 1, 1));
+        //NewTransform.SetScale3D(IsValid(ItemCDO) ? ItemCDO->GetActorScale() : FVector::OneVector);
         AActor* NewItemActor = GetWorld()->SpawnActor(Class, &NewTransform);      
 
 
         if (IsValid(NewItemActor))
         {
-            UE_LOG(LogTemp, Log, TEXT("Add new Valid Items Of Class"));
+            UE_LOG(LogTemp, Log, TEXT("Add new Items Of Class : %s"), *NewItemActor->GetName());
 
             UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(NewItemActor->GetRootComponent());
             if (IsValid(PrimitiveComponent))
@@ -106,7 +108,7 @@ bool UMH_ItemManager::AddItemsOfClass(const TSubclassOf<AActor> Class, const int
         }
         else
         {
-            UE_LOG(LogTemp, Log, TEXT("Add new Valid Items Of Class Failed"));
+            UE_LOG(LogTemp, Log, TEXT("Add Items Of Class Failed, ItemActor Is Not Valid"));
             return false;
         }
     }

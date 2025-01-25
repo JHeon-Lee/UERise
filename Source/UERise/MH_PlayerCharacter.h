@@ -27,6 +27,11 @@ private:
 	void ComponentAttach();
 	void Initialize();
 	
+	UFUNCTION()
+	void GetItemNearby();
+
+	UFUNCTION()
+	void GetItemCallBack(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
 
 public:
 	virtual void PostInitializeComponents() override;
@@ -340,6 +345,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
 	TArray<TObjectPtr<class UAnimMontage>> SpecialMoveMontages;
+
+	UPROPERTY()
+	TObjectPtr<class UMH_ItemComponent> NearbyItem;
 
 
 // Input

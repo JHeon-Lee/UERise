@@ -30,6 +30,7 @@
 #include "Character/Component/MHCharacterMovementComponent.h"
 #include "Character/Component/MHEquipmentComponent.h"
 #include "Item/MH_ItemManager.h"
+#include "Item/MH_ItemComponent.h"
 #include "GameData/MHPlayerAttackData.h"
 #include "DamageType/MHBasicDamageType.h"
 #include "LegacyCameraShake.h"
@@ -108,6 +109,7 @@ void AMH_PlayerCharacter::ComponentAttach()
 	}
 
 	Inventory = CreateDefaultSubobject<UMH_ItemManager>(TEXT("Inventory"));
+
 	
 }
 
@@ -124,6 +126,70 @@ void AMH_PlayerCharacter::Initialize()
 	{
 		EButtons key = static_cast<EButtons>(Enum);
 		PressMap.Add(key, false);
+	}
+}
+
+void AMH_PlayerCharacter::GetItemNearby()
+{
+	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypeArray;
+	ObjectTypeArray.Add(EObjectTypeQuery::ObjectTypeQuery6);
+
+	TArray<FHitResult> HitResults;
+
+	const bool bItemNearby =  UKismetSystemLibrary::SphereTraceMultiForObjects(GetWorld(),
+																			   GetActorLocation(),
+																			   GetActorLocation(),
+																			   200.0f,
+																			   ObjectTypeArray,
+																			   false,
+																			   TArray<AActor*>(),
+																			   EDrawDebugTrace::None,
+																			   HitResults,
+																			   true);
+	
+	if (!bItemNearby)
+	{
+		return;
+	}
+
+	for (FHitResult Result : HitResults)
+	{
+		NearbyItem = Result.GetActor()->FindComponentByClass<UMH_ItemComponent>();
+
+		if (!IsValid(NearbyItem))
+		{
+			continue;
+		}
+
+		float RotYaw = (UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Result.GetActor()->GetActorLocation())).Yaw ;
+		SetActorRotation(FRotator(0, RotYaw - 90.0f, 0));
+
+		if (FIND_MONTAGE(NearbyItem->ItemTagSlotType.GetTagName()))
+		{
+			PlayAnimMontage(FIND_MONTAGE(NearbyItem->ItemTagSlotType.GetTagName()));		
+
+			if (!GetMesh()->GetAnimInstance()->OnPlayMontageNotifyBegin.IsBound())
+			{
+				GetMesh()->GetAnimInstance()->OnPlayMontageNotifyBegin.AddDynamic(this, &AMH_PlayerCharacter::GetItemCallBack);
+			}
+
+		}
+		else
+		{
+			NearbyItem->PickUpItem(Inventory);
+		}
+		
+		break; 
+	}
+
+}
+
+void AMH_PlayerCharacter::GetItemCallBack(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload)
+{
+	if (NearbyItem != nullptr)
+	{
+		NearbyItem->PickUpItem(Inventory);
+		NearbyItem = nullptr;
 	}
 }
 
@@ -262,19 +328,12 @@ void AMH_PlayerCharacter::ComboStartB()
 	if (UMHGreatSwordComponent* GreatSwordComponent = FindComponentByClass<UMHGreatSwordComponent>())
 	{
 		PlayAnimMontage(FIND_MONTAGE("Character.Player.Montage.B_Gswd"));
-		
+		return;
 	}
 
-	// Near Prop Get
-	if (IsValid(NearPropRef) && WeaponType == EWeaponType::Unarmed)
+	if (WeaponType == EWeaponType::Unarmed)
 	{
-		double X = NearPropRef->GetActorLocation().X - GetActorLocation().X;
-		double Y = NearPropRef->GetActorLocation().Y - GetActorLocation().Y;
-
-		FRotator Rot = FVector(X, Y, 0.0).ToOrientationRotator();
-		Rot.Yaw -= 90.0;
-
-		SetActorRotation(Rot);
+		GetItemNearby();
 	}
 }
 
@@ -716,17 +775,19 @@ void AMH_PlayerCharacter::RotateTick(float InitialYaw, float MaxRotateDegree, fl
 		float KeyDirYaw = FVector(ActionValue.X, -1 * ActionValue.Y, 0).ToOrientationRotator().Yaw;
 		KeyDirYaw += CameraBoom->GetRelativeRotation().Yaw;
 
-		float NewYaw = (UKismetMathLibrary::RInterpTo_Constant(FRotator(0, 0, GetActorRotation().Yaw),
-										                       FRotator(0, 0, KeyDirYaw),
-										                       GetWorld()->DeltaTimeSeconds,
-										                       (RotateSpeed / GetWorld()->DeltaTimeSeconds))).Yaw;
+		const float DeltaInterpSpeed = (RotateSpeed / GetWorld()->GetDeltaSeconds()) * GetWorld()->GetDeltaSeconds();
 
-		double RotatedDegree = UKismetMathLibrary::Dot_VectorVector(FRotator(0, 0, InitialYaw).Vector(), 
-																	FRotator(0, 0, NewYaw).Vector());
+		float NewYaw = (UKismetMathLibrary::RInterpTo_Constant(FRotator(0, GetActorRotation().Yaw, 0),
+										                       FRotator(0, KeyDirYaw, 0),
+										                       GetWorld()->GetDeltaSeconds(),
+															   RotateSpeed / GetWorld()->GetDeltaSeconds())).Yaw;
+
+		double RotatedDegree = UKismetMathLibrary::Dot_VectorVector(FRotator(0, InitialYaw, 0).Vector(), 
+																	FRotator(0, NewYaw, 0).Vector());
 		
 		if (UKismetMathLibrary::DegAcos(RotatedDegree) < MaxRotateDegree)
 		{
-			SetActorRotation(FRotator(0, 0, NewYaw));
+			SetActorRotation(FRotator(0, NewYaw, 0));
 		}
 	}
 }
