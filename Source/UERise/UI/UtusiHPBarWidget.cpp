@@ -29,7 +29,7 @@ void UUtusiHPBarWidget::NativeConstruct()
 	if (CharacterWidget)
 	{
 		UE_LOG(LogTemp, Log, TEXT("UUtusiHPBarWidget OwingActor Cast Success"));
-		CharacterWidget->SetupCharacterWidget(this);
+		CharacterWidget->SetupCharacterHPWidget(this);
 	}
 	else
 	{

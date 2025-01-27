@@ -20,6 +20,7 @@
 #include "MHGameInstance.h"
 #include "UI/UtusiHPBarWidget.h"
 #include "UI/MHWidgetComponent.h"
+#include "UI/MHItemFrameWidget.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Particles/ParticleSystem.h"
@@ -792,7 +793,7 @@ void AMH_PlayerCharacter::RotateTick(float InitialYaw, float MaxRotateDegree, fl
 	}
 }
 
-void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)
+void AMH_PlayerCharacter::SetupCharacterHPWidget(UMHUserWidget* InUserWidget)
 {
 	UE_LOG(LogTemp, Log, TEXT("SetupCharacterWidget Called"));
 	UUtusiHPBarWidget* HpBarWidget = Cast<UUtusiHPBarWidget>(InUserWidget);	
@@ -809,6 +810,16 @@ void AMH_PlayerCharacter::SetupCharacterWidget(UMHUserWidget* InUserWidget)
 		UE_LOG(LogTemp, Log, TEXT("HpBarWidget Cast Failed"));
 	}
 
+}
+
+void AMH_PlayerCharacter::SetupItemWidget(UMHUserWidget* InUserWidget)
+{
+	UE_LOG(LogTemp, Log, TEXT("SetupItemWidget Called"));
+	UMHItemFrameWidget* ItemFrameWidget = Cast<UMHItemFrameWidget>(InUserWidget);
+	if (IsValid(ItemFrameWidget))
+	{
+		Inventory->OnItemUpdated.AddDynamic(ItemFrameWidget, &UMHItemFrameWidget::ItemUpdate);
+	}
 }
 
 void AMH_PlayerCharacter::SetPlayerState(EWeaponType Type)

@@ -116,7 +116,8 @@ public:
 	virtual void RotateTick(float InitialYaw, float MaxRotateDegree, float RotateSpeed) override;
 
 // Widget Interface Override
-	virtual void SetupCharacterWidget(class UMHUserWidget* InUserWidget) override;
+	virtual void SetupCharacterHPWidget(class UMHUserWidget* InUserWidget) override;
+	virtual void SetupItemWidget(class UMHUserWidget* InUserWidget) override;
 
 // Weapon Interface Override
 	virtual void SetPlayerState(EWeaponType Type) override;

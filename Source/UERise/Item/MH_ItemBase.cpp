@@ -7,7 +7,8 @@
 AMH_ItemBase::AMH_ItemBase()
 {
 	RootComponent = GetStaticMeshComponent();
-	
+	GetStaticMeshComponent()->SetCollisionObjectType(ECollisionChannel::ECC_EngineTraceChannel1);
+
 
 	ItemComponent = CreateDefaultSubobject<UMH_ItemComponent>(TEXT("ItemComponent"));
 	
@@ -15,6 +16,7 @@ AMH_ItemBase::AMH_ItemBase()
 	// WidgetComponent
 	ItemWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
 	ItemWidgetComponent->AttachToComponent(RootComponent, FAttachmentTransformRules(EAttachmentRule::KeepRelative, false));
+	ItemWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
 	ItemWidgetComponent->SetVisibility(false);
 
 	SphereCollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));

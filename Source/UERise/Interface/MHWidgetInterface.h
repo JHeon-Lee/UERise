@@ -22,6 +22,9 @@ class UERISE_API IMHWidgetInterface
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
-	virtual void SetupCharacterWidget(class UMHUserWidget* InUserWidget) = 0;
+
+	virtual void SetupCharacterHPWidget(class UMHUserWidget* InUserWidget) = 0;
+
+	virtual void SetupItemWidget(class UMHUserWidget* InUserWidget) = 0;
 
 };

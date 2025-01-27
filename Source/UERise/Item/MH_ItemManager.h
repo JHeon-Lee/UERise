@@ -50,6 +50,9 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "MH_ITEM")
     bool HasExactItem(AActor* Item);
 
+    UFUNCTION(BlueprintCallable, Category = "MH_ITEM")
+    bool UseSelectedConsumble();
+
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated, SaveGame)

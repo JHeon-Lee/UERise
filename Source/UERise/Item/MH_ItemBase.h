@@ -28,7 +28,11 @@ private:
 							  bool bFromSweep,
 							  const FHitResult& SweepResult);
 
-	void OnSphereEndOverlap( UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+	UFUNCTION()
+	void OnSphereEndOverlap( UPrimitiveComponent* OverlappedComponent, 
+							 AActor* OtherActor, 
+							 UPrimitiveComponent* OtherComp, 
+							 int32 OtherBodyIndex);
 	
 public:
 	bool DoOnce = false;

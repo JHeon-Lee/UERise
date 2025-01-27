@@ -1,0 +1,37 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "UI/MHUserWidget.h"
+#include "MHItemFrameWidget.generated.h"
+
+/**
+ * 
+ */
+UCLASS()
+class UERISE_API UMHItemFrameWidget : public UMHUserWidget
+{
+	GENERATED_BODY()
+
+public:
+	UMHItemFrameWidget(const FObjectInitializer& ObjectInitializer);
+
+
+	UFUNCTION()
+	void ItemUpdate(AActor* UpdatedItem);
+
+protected:
+	virtual void NativeConstruct() override;
+
+public:
+	UPROPERTY()
+	TArray<TObjectPtr<AActor>> ConsumableArray;
+
+	UPROPERTY()
+	TObjectPtr<class UImage> ConsumableIcon;
+
+	UPROPERTY()
+	TObjectPtr<class UTextBlock> Quantity;
+	
+};

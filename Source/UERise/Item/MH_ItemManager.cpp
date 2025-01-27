@@ -229,3 +229,8 @@ bool UMH_ItemManager::HasExactItem(AActor* Item)
 {
     return GetAllItems().Contains(Item);
 }
+
+bool UMH_ItemManager::UseSelectedConsumble()
+{
+    return false;
+}

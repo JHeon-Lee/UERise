@@ -35,6 +35,16 @@ public:
 		return MHDataContainerAsset->GetNiagaraSystem(FGameplayTag::RequestGameplayTag(Tag));
 	}
 
+	FSlateBrush FindImage(FName Tag)
+	{
+		if (FGameplayTag::RequestGameplayTag(Tag).IsValid())
+		{
+			return MHDataContainerAsset->GetBrush(FGameplayTag::RequestGameplayTag(Tag));
+		}
+
+		return FSlateBrush();
+	}
+
 protected:
 	UMHGameInstance();
 	UMHDataContainer* GetMHDataContainerAsset() { return MHDataContainerAsset; }		

@@ -6,6 +6,8 @@
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
 #include "NiagaraSystem.h"
+#include "SlateCore/Public/Styling/SlateBrush.h"
+#include "Components/Image.h"
 #include "MHDataContainer.generated.h"
 /**
  * 
@@ -41,18 +43,30 @@ public:
         return nullptr;
     }
 
+    FSlateBrush GetBrush(FGameplayTag Key) const
+    {
+        if (BrushMap.Contains(Key))
+        {
+            return BrushMap[Key];
+        }
+        return FSlateBrush();
+    }
 
-
+    
 public:
-    // 애니메이션 몽타주 데이터
+    // Montage Data
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     TMap<FGameplayTag, UAnimMontage*> AnimationMontageMap;
 
-    // 나이아가라 이펙트 데이터
+    // Niagara Data
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
     TMap<FGameplayTag, class UNiagaraSystem*> NiagaraEffectMap;
 
-    // 데이터 초기화 함수
+    // Image Data
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Images")
+    TMap<FGameplayTag, FSlateBrush> BrushMap;
+
+    
     UFUNCTION(BlueprintCallable, Category = "Game Data")
     void InitializeData();
 	
