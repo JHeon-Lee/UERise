@@ -21,7 +21,7 @@ void UMHItemFrameWidget::ItemUpdate(AActor* UpdatedItem)
 
 	if (IsValid(ItemComponent))
 	{
-		bool bIsItemConsumable = ItemComponent->ItemTagSlotType.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Consumable")));
+		bool bIsItemConsumable = ItemComponent->ItemTagSlotType.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("Item.Consumable")));
 
 		// Item Is Not Consumable
 		if(!bIsItemConsumable)
@@ -29,34 +29,94 @@ void UMHItemFrameWidget::ItemUpdate(AActor* UpdatedItem)
 			return;
 		}
 
-		// ConsuableArray is Empty, So Add Actor Directly
+		// ConsuableArray is Empty, So Add New Actor Directly
 		if (ConsumableArray.IsEmpty())
 		{
 			ConsumableArray.Add(UpdatedItem);
-
-			UMHGameInstance* GameInstance = Cast<UMHGameInstance>(GetWorld()->GetGameInstance());
-			if (IsValid(GameInstance))
-			{
-				ConsumableIcon->SetBrush(GameInstance->FindImage(ItemComponent->ItemTagSlotType.GetTagName()));
-			}			
-			Quantity->SetText(FText::AsNumber(ItemComponent->CurrentStack));
+			DisplayingIndex = ConsumableArray.Num() - 1;
+			UpdateIconAndQunatity();
 
 			return;
 		}
 
 		// If Item Actor already in Consumable Array, add Stack
-		for (AActor* item : ConsumableArray)
+		for (int32 index = 0; index < ConsumableArray.Num(); index++)
 		{
-			if (item->GetClass() == UpdatedItem->GetClass())
+			if (ConsumableArray[index]->GetClass() == UpdatedItem->GetClass())
 			{
-
+				if (index == DisplayingIndex)
+				{
+					UpdateIconAndQunatity();
+				}
 				return;
 			}
 		}
 
+		// Add New Item to Item Slot
 		ConsumableArray.Add(UpdatedItem);
+		DisplayingIndex = ConsumableArray.Num()-1;
 	}
 
+
+}
+
+FGameplayTag UMHItemFrameWidget::GetDisplayingItemTag()
+{
+	FGameplayTag Tag;
+	if (ConsumableArray.IsValidIndex(DisplayingIndex))
+	{
+		UMH_ItemComponent* ItemComponent = ConsumableArray[DisplayingIndex]->FindComponentByClass<UMH_ItemComponent>();
+		if (ItemComponent)
+		{
+			return ItemComponent->ItemTagSlotType;
+		}
+	}
+
+	return FGameplayTag();
+}
+
+void UMHItemFrameWidget::ChangeDisplayingIndex(float InputValue)
+{
+	if (ConsumableArray.Num() <= 1)
+	{
+		return;
+	}
+
+	if (InputValue > 0)
+	{
+		DisplayingIndex++;
+
+		if (DisplayingIndex >= ConsumableArray.Num())
+		{
+			DisplayingIndex -= ConsumableArray.Num();
+		}		
+	}
+	else if (InputValue < 0)
+	{
+		DisplayingIndex--;
+
+		if (DisplayingIndex <= -1)
+		{
+			DisplayingIndex += ConsumableArray.Num();
+		}
+	}
+
+	UpdateIconAndQunatity();
+}
+
+void UMHItemFrameWidget::UpdateIconAndQunatity()
+{
+	if (ConsumableArray.IsValidIndex(DisplayingIndex))
+	{
+		UMH_ItemComponent* ItemComponent = ConsumableArray[DisplayingIndex]->FindComponentByClass<UMH_ItemComponent>();
+		UMHGameInstance* GameInstance = Cast<UMHGameInstance>(GetWorld()->GetGameInstance());
+
+		if (ItemComponent && GameInstance)
+		{
+			ConsumableIcon->SetBrush(GameInstance->FindImage(ItemComponent->ItemTagSlotType.GetTagName()));
+			Quantity->SetText(FText::AsNumber(ItemComponent->CurrentStack));
+		}				
+	}
 
 }
 
@@ -68,14 +128,16 @@ void UMHItemFrameWidget::NativeConstruct()
 
 	Quantity = Cast<UTextBlock>(GetWidgetFromName(TEXT("Number")));
 
-	if (!IsValid(OwingActor))
+	
+	if (GetOwningPlayerPawn())
 	{
 		UE_LOG(LogTemp, Log, TEXT("Owning Actor Is null"));
 	}
-		
+
 
 	IMHWidgetInterface* CharacterWidget = Cast<IMHWidgetInterface>(OwingActor);
 	if (CharacterWidget)
 	{
 		CharacterWidget->SetupItemWidget(this);
 	}
+}

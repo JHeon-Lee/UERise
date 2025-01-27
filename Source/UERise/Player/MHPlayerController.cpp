@@ -18,3 +18,19 @@ AMHPlayerController::AMHPlayerController()
 		MHVillageHUDWidgetClass = MHVillageHUDWidgetRef.Class;
 	}
 }
+
+void AMHPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	FInputModeGameOnly GameOnlyInputMode;
+	SetInputMode(GameOnlyInputMode);
+
+
+	MHHUDWidget = CreateWidget<UMHHUDWidget>(this, MHHUDWidgetClass);
+	if(MHHUDWidget)
+	{
+		MHHUDWidget->AddToViewport();
+	}
+
+}

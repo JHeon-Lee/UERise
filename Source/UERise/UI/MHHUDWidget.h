@@ -13,5 +13,31 @@ UCLASS()
 class UERISE_API UMHHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
+
+
+public:
+	UMHHUDWidget(const FObjectInitializer& ObjectInitializer);
+
+public:
+	void UpdateMaxHp(float MaxHp);
+	void UpdateHpBar(float NewCurrentHp);
+
 	
+
+	UFUNCTION()
+	void UpdateItemSlotBar(AActor* NewItem);
+
+	void ChangeItemSlot(float InputValue);
+
+protected:
+	virtual void NativeConstruct() override;
+
+protected:
+	UPROPERTY()
+	TObjectPtr<class UUtusiHPBarWidget> HpBar;
+
+	UPROPERTY()
+	TObjectPtr<class UMHItemFrameWidget> ItemWidget;
+
+
 };

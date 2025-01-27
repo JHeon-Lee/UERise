@@ -17,14 +17,20 @@ class UERISE_API UMHItemFrameWidget : public UMHUserWidget
 public:
 	UMHItemFrameWidget(const FObjectInitializer& ObjectInitializer);
 
-
 	UFUNCTION()
 	void ItemUpdate(AActor* UpdatedItem);
+
+	FGameplayTag GetDisplayingItemTag();
+
+	void ChangeDisplayingIndex(float InputValue);
+	void UpdateIconAndQunatity();
 
 protected:
 	virtual void NativeConstruct() override;
 
 public:
+	int32 DisplayingIndex = -1;
+
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> ConsumableArray;
 

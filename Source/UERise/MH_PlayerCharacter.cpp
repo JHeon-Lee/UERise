@@ -7,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "CharacterStat/UtusiStatComponent.h"
 #include "Animation/MHAnimInstancePlayer.h"
+#include "Player/MHPlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/DamageType.h"
@@ -21,6 +22,7 @@
 #include "UI/UtusiHPBarWidget.h"
 #include "UI/MHWidgetComponent.h"
 #include "UI/MHItemFrameWidget.h"
+#include "UI/MHHUDWidget.h"
 #include "NiagaraFunctionLibrary.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Particles/ParticleSystem.h"
@@ -252,6 +254,19 @@ void AMH_PlayerCharacter::ULook(const FInputActionValue& Value)
 	CameraBoom->SetRelativeRotation(BoomRotate);
 }
 
+void AMH_PlayerCharacter::ChangeItemSlot(const FInputActionValue& Value)
+{
+	float AxisValue = Value.Get<float>();	
+	AMHPlayerController* MyController = Cast<AMHPlayerController>(GetController());
+	if (MyController)
+	{
+		UMHHUDWidget* MHHUD = MyController->GetMainWidget();
+		ensure(MHHUD);
+
+		MHHUD->ChangeItemSlot(AxisValue);
+	}
+}
+
 void AMH_PlayerCharacter::ComboStartA()
 {	
 	PressA = true;
@@ -422,6 +437,7 @@ void AMH_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 	EnhancedInputComponent->BindAction(IA_Look, ETriggerEvent::Triggered, this, &AMH_PlayerCharacter::ULook);	
 	EnhancedInputComponent->BindAction(IA_Move, ETriggerEvent::Triggered, this, &AMH_PlayerCharacter::URotate);
+	EnhancedInputComponent->BindAction(IA_Wheel, ETriggerEvent::Triggered, this, &AMH_PlayerCharacter::ChangeItemSlot);
 
 	// Press Boolean On
 	EnhancedInputComponent->BindAction(IA_A, ETriggerEvent::Started, this, &AMH_PlayerCharacter::ComboStartA);
@@ -794,12 +810,11 @@ void AMH_PlayerCharacter::RotateTick(float InitialYaw, float MaxRotateDegree, fl
 }
 
 void AMH_PlayerCharacter::SetupCharacterHPWidget(UMHUserWidget* InUserWidget)
-{
-	UE_LOG(LogTemp, Log, TEXT("SetupCharacterWidget Called"));
+{	
 	UUtusiHPBarWidget* HpBarWidget = Cast<UUtusiHPBarWidget>(InUserWidget);	
 	if (HpBarWidget)
 	{		
-		UE_LOG(LogTemp, Log, TEXT("HpBarWidget Cast Success"));
+		
 		HpBarWidget->SetMaxHp(StatComponent->GetMaxHp());
 		HpBarWidget->UpdateHpBar(StatComponent->GetCurrentHp());
 
@@ -820,6 +835,27 @@ void AMH_PlayerCharacter::SetupItemWidget(UMHUserWidget* InUserWidget)
 	{
 		Inventory->OnItemUpdated.AddDynamic(ItemFrameWidget, &UMHItemFrameWidget::ItemUpdate);
 	}
+}
+
+void AMH_PlayerCharacter::SetupHUD(UMHHUDWidget* MHHUD)
+{	
+	if (MHHUD)
+	{
+		// Delegate Subscribe
+		if (StatComponent)
+		{			
+			MHHUD->UpdateMaxHp(StatComponent->GetMaxHp());
+			MHHUD->UpdateHpBar(StatComponent->GetCurrentHp());
+
+			StatComponent->OnMaxHpChanged.AddUObject(MHHUD, &UMHHUDWidget::UpdateMaxHp);
+			StatComponent->OnCurrentHpChanged.AddUObject(MHHUD, &UMHHUDWidget::UpdateHpBar);
+		}
+		if (Inventory)
+		{
+			Inventory->OnItemUpdated.AddDynamic(MHHUD, &UMHHUDWidget::UpdateItemSlotBar);
+		}
+	}
+
 }
 
 void AMH_PlayerCharacter::SetPlayerState(EWeaponType Type)

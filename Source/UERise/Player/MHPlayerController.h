@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "UI/MHHUDWidget.h"
 #include "GameFramework/PlayerController.h"
 #include "MHPlayerController.generated.h"
 
@@ -17,6 +18,11 @@ class UERISE_API AMHPlayerController : public APlayerController
 
 public:
 	AMHPlayerController();
+
+	UMHHUDWidget* GetMainWidget() { return MHHUDWidget; }
+
+protected:
+	virtual void BeginPlay() override;
 
 //HUD
 protected:

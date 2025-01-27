@@ -7,7 +7,7 @@
 #include "GameData/MHDataContainer.h"
 #include "MHGameInstance.generated.h"
 
-
+#define MHLOG(Format) UE_LOG(LogTemp, Log, TEXT(Format))
 #define FIND_MONTAGE(Tag) Cast<UMHGameInstance>(GetOwner()->GetWorld()->GetGameInstance())->FindMontage(Tag)
 #define FIND_SYSTEM(Tag)  Cast<UMHGameInstance>(GetOwner()->GetWorld()->GetGameInstance())->FindSystem(Tag)
 /**
@@ -24,7 +24,7 @@ public:
 	{
 		FGameplayTag GameTag = FGameplayTag::RequestGameplayTag(Tag);
 		if (GameTag.IsValid())
-		{
+		{			
 			return MHDataContainerAsset->GetAnimationMontage(GameTag);
 		}
 		return nullptr;

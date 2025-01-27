@@ -27,4 +27,6 @@ public:
 
 	virtual void SetupItemWidget(class UMHUserWidget* InUserWidget) = 0;
 
+	virtual void SetupHUD (class UMHHUDWidget* MHHUD) = 0;
+
 };

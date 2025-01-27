@@ -40,6 +40,7 @@ public:
 public:
 	void URotate(const FInputActionValue& Value);
 	void ULook(const FInputActionValue& Value);
+	void ChangeItemSlot(const FInputActionValue& Value);
 
 	// 버튼으로 시작되는 몽타주 재생
 	void ComboStartA();
@@ -118,6 +119,7 @@ public:
 // Widget Interface Override
 	virtual void SetupCharacterHPWidget(class UMHUserWidget* InUserWidget) override;
 	virtual void SetupItemWidget(class UMHUserWidget* InUserWidget) override;
+	virtual void SetupHUD(class UMHHUDWidget* MHHUD) override;
 
 // Weapon Interface Override
 	virtual void SetPlayerState(EWeaponType Type) override;
@@ -164,6 +166,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = Item)
 	TObjectPtr <class UMH_ItemManager> Inventory;
 
+	//Reference
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
 	TObjectPtr<class APostProcessVolume> PostProcessVolumeRef;
@@ -185,8 +188,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
 	TObjectPtr<class UDataTable> GSwdAttackDataTableRef;
-
-
+	
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effect")
 	TObjectPtr<class UNiagaraSystem> HitEffect;
@@ -383,5 +385,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_Look;	
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> IA_Wheel;
 
 };

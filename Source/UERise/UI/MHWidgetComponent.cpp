@@ -10,7 +10,7 @@ void UMHWidgetComponent::InitWidget()
 	Super::InitWidget();
 	UE_LOG(LogTemp, Log, TEXT("UMHWidgetComponent InitWidget Called"));
 
-	UUtusiHPBarWidget* MHUserWidget = Cast<UUtusiHPBarWidget>(GetWidget());
+	UMHUserWidget* MHUserWidget = Cast<UMHUserWidget>(GetWidget());
 	if (MHUserWidget)
 	{
 		UE_LOG(LogTemp, Log, TEXT("MHUserWidget Cast Success"));
