@@ -51,7 +51,9 @@ public:
     bool HasExactItem(AActor* Item);
 
     UFUNCTION(BlueprintCallable, Category = "MH_ITEM")
-    bool UseSelectedConsumble();
+    bool UseSelectedConsumble(FGameplayTag ItemTag);
+
+
 
 
 public:

@@ -2,7 +2,6 @@
 
 
 #include "UI/MHHUDWidget.h"
-#include "UI/MHItemFrameWidget.h"
 #include "UI/UtusiHPBarWidget.h"
 #include "GameplayTagContainer.h"
 #include "Interface/MHWidgetInterface.h"
@@ -31,7 +30,6 @@ void UMHHUDWidget::ChangeItemSlot(float InputValue)
 {
 	ItemWidget->ChangeDisplayingIndex(InputValue);
 }
-
 
 
 void UMHHUDWidget::NativeConstruct()

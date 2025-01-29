@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/StaticMeshActor.h"
+#include "GameplayTagContainer.h"
 #include "Components/SphereComponent.h"
 #include "MH_ItemBase.generated.h"
 
@@ -33,6 +34,11 @@ private:
 							 AActor* OtherActor, 
 							 UPrimitiveComponent* OtherComp, 
 							 int32 OtherBodyIndex);
+
+
+protected:
+	UFUNCTION(BlueprintCallable)
+	virtual void UseItem(AActor* Item, FGameplayTag ItemTag) ;
 	
 public:
 	bool DoOnce = false;

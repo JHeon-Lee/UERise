@@ -2,6 +2,7 @@
 
 
 #include "MH_ItemComponent.h"
+#include "GameFramework/Actor.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetGuidLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -94,11 +95,13 @@ void UMH_ItemComponent::PickUpItem(UMH_ItemManager* InventoryPick)
     if (InventoryPick->AddItemsOfClass(ItemActor->GetClass(), CurrentStack))
     {
         // Set ownership and instigator for the item - so the dispatcher can notify the owner of the update.
-        ItemActor->SetOwner(InventoryOwner);
-        ItemActor->SetInstigator(InventoryOwner->GetInstigator());
+
         OnPickup.Broadcast(InventoryPick);
 
-       ItemActor->Destroy();
+        if (ItemActor->Destroy())
+        {
+            UE_LOG(LogTemp, Log, TEXT("DestroyActor"));
+        }
     }
 }
 

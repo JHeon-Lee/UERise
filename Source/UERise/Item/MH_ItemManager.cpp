@@ -5,6 +5,7 @@
 #include "Item/MH_ItemComponent.h"
 #include "GameFramework/PlayerState.h"
 #include "Components/SphereComponent.h"
+#include "Interface/MHItemInferface.h"
 #include "Kismet/KismetArrayLibrary.h"
 #include "Kismet/KismetGuidLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -93,6 +94,9 @@ bool UMH_ItemManager::AddItemsOfClass(const TSubclassOf<AActor> Class, const int
         if (IsValid(NewItemActor))
         {
             UE_LOG(LogTemp, Log, TEXT("Add new Items Of Class : %s"), *NewItemActor->GetName());
+
+            NewItemActor->SetOwner(GetOwner());
+            NewItemActor->SetInstigator(GetOwner()->GetInstigator());
 
             UPrimitiveComponent* PrimitiveComponent = Cast<UPrimitiveComponent>(NewItemActor->GetRootComponent());
             if (IsValid(PrimitiveComponent))
@@ -230,7 +234,17 @@ bool UMH_ItemManager::HasExactItem(AActor* Item)
     return GetAllItems().Contains(Item);
 }
 
-bool UMH_ItemManager::UseSelectedConsumble()
+bool UMH_ItemManager::UseSelectedConsumble(FGameplayTag ItemTag)
 {
+    for (AActor* item :InventoryStorage )
+    {
+        UMH_ItemComponent* ItemComponent = IsValid(item) ?
+            Cast<UMH_ItemComponent>(item->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
+
+        if (ItemComponent->ItemTagSlotType == ItemTag)
+        {
+            ItemComponent->UseItem(item, ItemTag);
+        }
+    }
     return false;
 }

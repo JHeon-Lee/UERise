@@ -4,31 +4,25 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameData/MHMacros.h"
 #include "MH_PlayerStatComponent.generated.h"
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMaxHpChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMaxHpModifierChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentHpChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaModifierChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentStaminaChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnMaxWeaponDurabilityChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnCurrentWeaponDurabilityChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnAtkChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnAtkModifierChangedDelegate, float /*ChagedValue*/);
-DECLARE_MULTICAST_DELEGATE_OneParam(FOnCriticalChangedDelegate, float /*ChagedValue*/);
-
-#define VALUE_GETTER(PropertyName) \
-	FORCEINLINE float Get##PropertyName() const { return PropertyName; }
-
-#define VALUE_SETTER(PropertyName) \
-	FORCEINLINE void Set##PropertyName(float NewVal) { PropertyName = NewVal; On##PropertyName##Changed.Broadcast(NewVal); }
 
 
-#define VALUE_BASICFUNCTIONS(PropertyName) \
-	FOn##PropertyName##ChangedDelegate On##PropertyName##Changed;\
-	VALUE_GETTER(PropertyName) \
-	VALUE_SETTER(PropertyName) \
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHpChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxHpModifierChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentHpChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxStaminaModifierChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentStaminaChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMaxWeaponDurabilityChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurrentWeaponDurabilityChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAtkChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAtkModifierChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCriticalChanged, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWireBugStackChanged, int32, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCurWireBugStackChanged, int32, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnChargeStepChanged, int32, NewValue);
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -45,64 +39,25 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
-	VALUE_BASICFUNCTIONS(MaxHp);
-	VALUE_BASICFUNCTIONS(MaxHpModifier);
-	VALUE_BASICFUNCTIONS(CurrentHp);
-	VALUE_BASICFUNCTIONS(MaxStamina);
-	VALUE_BASICFUNCTIONS(MaxStaminaModifier);
-	VALUE_BASICFUNCTIONS(CurrentStamina);
-	VALUE_BASICFUNCTIONS(MaxWeaponDurability);
-	VALUE_BASICFUNCTIONS(CurrentWeaponDurability);
-	VALUE_BASICFUNCTIONS(Atk);
-	VALUE_BASICFUNCTIONS(AtkModifier);
-	VALUE_BASICFUNCTIONS(Critical);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, MaxHp);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, MaxHpModifier);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, CurrentHp);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, MaxStamina);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, MaxStaminaModifier);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, CurrentStamina);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, MaxWeaponDurability);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, CurrentWeaponDurability);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, Atk);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, AtkModifier);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(float, Critical);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(int32, WireBugStack);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(int32, CurWireBugStack);
+	PROPERTY_WITH_ACCESSORS_AND_DELEGATE(int32, ChargeStep);
+
 
 public:
 	float CaculateDamage(float BasePower, bool &IsCriticalHit);
 
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float MaxHp;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float MaxHpModifier;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float CurrentHp;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float MaxStamina;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float MaxStaminaModifier;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float CurrentStamina;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float MaxWeaponDurability;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float CurrentWeaponDurability;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float Atk;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float AtkModifier;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float Critical;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	int32 WireBugStack;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	uint8 CurWireBugStack;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	uint8 ChargeStep;
 
 };
 

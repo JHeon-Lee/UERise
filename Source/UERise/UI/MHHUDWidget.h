@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/MHItemFrameWidget.h"
+#include "GameplayTagContainer.h"
 #include "MHHUDWidget.generated.h"
 
 /**
@@ -19,15 +21,18 @@ public:
 	UMHHUDWidget(const FObjectInitializer& ObjectInitializer);
 
 public:
+	UFUNCTION()
 	void UpdateMaxHp(float MaxHp);
-	void UpdateHpBar(float NewCurrentHp);
 
-	
+	UFUNCTION()
+	void UpdateHpBar(float NewCurrentHp);
 
 	UFUNCTION()
 	void UpdateItemSlotBar(AActor* NewItem);
 
 	void ChangeItemSlot(float InputValue);
+
+	FGameplayTag GetDisplayingItemTag() {return ItemWidget->GetDisplayingItemTag(); };
 
 protected:
 	virtual void NativeConstruct() override;

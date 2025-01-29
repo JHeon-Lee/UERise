@@ -14,6 +14,10 @@
 #include "Components/TimelineComponent.h"
 #include "MH_PlayerCharacter.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnWheelTriggered, float /*ChagedValue*/);
+DECLARE_MULTICAST_DELEGATE(FOnXButtonTriggered);
+
+
 UCLASS()
 class UERISE_API AMH_PlayerCharacter : public ACharacter, public IMH_AnimNotifyInterface, public IMHWidgetInterface, public IMH_WeaponComponentInterface
 {
@@ -26,6 +30,7 @@ public:
 private:
 	void ComponentAttach();
 	void Initialize();
+	void UseItem();
 	
 	UFUNCTION()
 	void GetItemNearby();
@@ -59,7 +64,7 @@ public:
 	void PressWASDOff() { PressWASD = false; ActionValue = FVector2D(0.0, 0.0); KeyDirInt = 0;}
 
 	void PressBOn() { PressB = true; }
-	void PressXOn() { PressX = true; }
+	void PressXOn();
 	void PressYOn() { PressY = true; }
 	void PressRBOn() { PressRB = true; }
 	void PressRTOn() { PressRT = true; }
@@ -388,4 +393,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> IA_Wheel;
 
+
+	FOnWheelTriggered OnWheelTrigged;
+	FOnXButtonTriggered OnXButtonTriggered;
 };

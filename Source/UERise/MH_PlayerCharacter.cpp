@@ -132,6 +132,25 @@ void AMH_PlayerCharacter::Initialize()
 	}
 }
 
+void AMH_PlayerCharacter::UseItem()
+{
+	bool bCanUseItem = (WeaponType == EWeaponType::Unarmed) &&
+		(!GetMesh()->GetAnimInstance()->IsAnyMontagePlaying());
+
+	if (!bCanUseItem)
+	{
+		return;
+	}
+
+	FGameplayTag ItemTag = Cast<AMHPlayerController>(GetController())->GetMainWidget()->GetDisplayingItemTag();
+	if (ItemTag.IsValid())
+	{
+		PlayAnimMontage(FIND_MONTAGE(ItemTag.GetTagName()));
+		Inventory->UseSelectedConsumble(ItemTag);
+	}
+	
+}
+
 void AMH_PlayerCharacter::GetItemNearby()
 {
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypeArray;
@@ -257,14 +276,7 @@ void AMH_PlayerCharacter::ULook(const FInputActionValue& Value)
 void AMH_PlayerCharacter::ChangeItemSlot(const FInputActionValue& Value)
 {
 	float AxisValue = Value.Get<float>();	
-	AMHPlayerController* MyController = Cast<AMHPlayerController>(GetController());
-	if (MyController)
-	{
-		UMHHUDWidget* MHHUD = MyController->GetMainWidget();
-		ensure(MHHUD);
-
-		MHHUD->ChangeItemSlot(AxisValue);
-	}
+	OnWheelTrigged.Broadcast(AxisValue);
 }
 
 void AMH_PlayerCharacter::ComboStartA()
@@ -818,7 +830,7 @@ void AMH_PlayerCharacter::SetupCharacterHPWidget(UMHUserWidget* InUserWidget)
 		HpBarWidget->SetMaxHp(StatComponent->GetMaxHp());
 		HpBarWidget->UpdateHpBar(StatComponent->GetCurrentHp());
 
-		StatComponent->OnCurrentHpChanged.AddUObject(HpBarWidget, &UUtusiHPBarWidget::UpdateHpBar);
+		StatComponent->OnCurrentHpChanged.AddDynamic(HpBarWidget, &UUtusiHPBarWidget::UpdateHpBar);
 	}
 	else
 	{
@@ -846,16 +858,17 @@ void AMH_PlayerCharacter::SetupHUD(UMHHUDWidget* MHHUD)
 		{			
 			MHHUD->UpdateMaxHp(StatComponent->GetMaxHp());
 			MHHUD->UpdateHpBar(StatComponent->GetCurrentHp());
-
-			StatComponent->OnMaxHpChanged.AddUObject(MHHUD, &UMHHUDWidget::UpdateMaxHp);
-			StatComponent->OnCurrentHpChanged.AddUObject(MHHUD, &UMHHUDWidget::UpdateHpBar);
+			OnWheelTrigged.AddUObject(MHHUD, &UMHHUDWidget::ChangeItemSlot);
+			
+			StatComponent->OnMaxHpChanged.AddDynamic(MHHUD, &UMHHUDWidget::UpdateMaxHp);
+			StatComponent->OnCurrentHpChanged.AddDynamic(MHHUD, &UMHHUDWidget::UpdateHpBar);
 		}
 		if (Inventory)
 		{
 			Inventory->OnItemUpdated.AddDynamic(MHHUD, &UMHHUDWidget::UpdateItemSlotBar);
 		}
 	}
-
+	
 }
 
 void AMH_PlayerCharacter::SetPlayerState(EWeaponType Type)
@@ -876,6 +889,13 @@ void AMH_PlayerCharacter::AttachGreatSwdComponent()
 }
 
 
+
+void AMH_PlayerCharacter::PressXOn()
+{
+	PressX = true;
+	OnXButtonTriggered.Broadcast();
+	UseItem();
+}
 
 void AMH_PlayerCharacter::SwitchAtkMode()
 {

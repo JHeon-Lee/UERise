@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UI/MHUserWidget.h"
+#include "GameplayTagContainer.h"
 #include "MHItemFrameWidget.generated.h"
 
 /**
