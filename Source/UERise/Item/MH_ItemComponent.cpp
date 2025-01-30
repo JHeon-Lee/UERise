@@ -112,8 +112,17 @@ void UMH_ItemComponent::UseItem(AActor* User, FGameplayTag GameplayTag)
     {
         return;
     }
-
     OnItemUsed.Broadcast(User, GameplayTag);
+}
+
+void UMH_ItemComponent::StopUseItem(AActor* User)
+{
+    const AActor* ItemComponentOwner = GetOwner();
+    if (!IsValid(ItemComponentOwner) || !ItemComponentOwner->HasAuthority())
+    {
+        return;
+    }
+    OnItemUseEnd.Broadcast(User);
 }
 
 

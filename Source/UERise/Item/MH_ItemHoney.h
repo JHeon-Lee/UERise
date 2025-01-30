@@ -15,7 +15,9 @@ class UERISE_API AMH_ItemHoney : public AMH_ItemBase
 	GENERATED_BODY()
 	
 protected:
-	virtual void UseItem(AActor* Item, FGameplayTag ItemTag);
+		
+	virtual void UseItem(AActor* Item, FGameplayTag ItemTag) override;
+	virtual void StopUse(AActor* Item) override;
 		
 	void ApplyEffectTick();
 	void EndEffect();

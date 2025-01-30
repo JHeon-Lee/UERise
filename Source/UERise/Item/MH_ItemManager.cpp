@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerState.h"
 #include "Components/SphereComponent.h"
 #include "Interface/MHItemInferface.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetArrayLibrary.h"
 #include "Kismet/KismetGuidLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -142,18 +143,60 @@ bool UMH_ItemManager::RemoveItemsOfClass(const TSubclassOf<AActor> Class, const 
 
         if (IsValid(ItemComponent))
         {
-            if (ItemComponent->CurrentStack > Quantity)
+            if (ItemComponent->CurrentStack >= Quantity)
             {
                 ItemComponent->CurrentStack -= Quantity;
             }
             else
             {
-                ItemActor->Destroy();
-                return true;
+            //    ItemActor->Destroy();
             }
+
+            // Notify To Widget
+            OnItemRemoved.Broadcast(ItemActor);
+            return true;
         }
     }
 
+    return false;
+}
+
+bool UMH_ItemManager::RemoveItemsOfTag(const FGameplayTag Tag, const int32 Quantity)
+{
+    const AActor* InventoryManagerOwner = GetOwner();
+    if (!IsValid(InventoryManagerOwner) || !InventoryManagerOwner->HasAuthority())
+    {
+        return false;
+    }
+
+    const bool bHasEnoughItems = HasEnoughItemsWithTag(Tag, Quantity);
+
+    if (!bHasEnoughItems)
+    {
+        return false;
+    }
+
+    AActor* ItemActor;
+    if (GetItemOfTag(Tag, ItemActor))
+    {
+        UMH_ItemComponent* ItemComponent = Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass()));
+
+        if (IsValid(ItemComponent))
+        {
+            if (ItemComponent->CurrentStack >= Quantity)
+            {
+                ItemComponent->CurrentStack -= Quantity;
+            }
+            else
+            {
+            //    ItemActor->Destroy();
+            }
+
+            // Notify To Widget
+            OnItemRemoved.Broadcast(ItemActor);
+            return true;
+        }
+    }
     return false;
 }
 
@@ -181,10 +224,32 @@ bool UMH_ItemManager::GetItemOfClass(const TSubclassOf<AActor> Class, AActor*& I
 	return false;
 }
 
+bool UMH_ItemManager::GetItemOfTag(FGameplayTag ItemTag, AActor*& ItemActor)
+{
+    if (InventoryStorage.IsEmpty())
+    {
+        return false;
+    }
+
+    for (const auto& Item : InventoryStorage)
+    {
+        UMH_ItemComponent* ItemComponent = Item->FindComponentByClass<UMH_ItemComponent>();
+
+        if (ItemComponent && ItemComponent->ItemTagSlotType == ItemTag)
+        {
+            ItemActor = Item;
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool UMH_ItemManager::HasEnoughItems(const TSubclassOf<AActor> Item, const int32 Quantity)
 {
     if (Quantity <= 0)
     {
+
         return false;
     }
 
@@ -208,6 +273,36 @@ bool UMH_ItemManager::HasEnoughItems(const TSubclassOf<AActor> Item, const int32
     }
 
 	return false;
+}
+
+bool UMH_ItemManager::HasEnoughItemsWithTag(FGameplayTag ItemTag, const int32 Quantity)
+{
+    if (Quantity <= 0)
+    {
+        return false;
+    }
+
+    AActor* ItemActor;
+    if (!GetItemOfTag(ItemTag, ItemActor))
+    {
+        return false;
+    }
+
+    UMH_ItemComponent* ItemComponent = IsValid(ItemActor) ?
+        Cast<UMH_ItemComponent>(ItemActor->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
+
+    if (!ensure(IsValid(ItemComponent)))
+    {
+        return false;
+    }
+
+    if (ItemComponent->CurrentStack >= Quantity)
+    {
+        return true;
+    }
+
+
+    return false;
 }
 
 int32 UMH_ItemManager::GetItemQuantity(const TSubclassOf<AActor> Item)
@@ -236,15 +331,56 @@ bool UMH_ItemManager::HasExactItem(AActor* Item)
 
 bool UMH_ItemManager::UseSelectedConsumble(FGameplayTag ItemTag)
 {
-    for (AActor* item :InventoryStorage )
+    AActor* item = nullptr;
+    GetItemOfTag(ItemTag, item);
+
+    if (item)
     {
         UMH_ItemComponent* ItemComponent = IsValid(item) ?
             Cast<UMH_ItemComponent>(item->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
 
         if (ItemComponent->ItemTagSlotType == ItemTag)
         {
-            ItemComponent->UseItem(item, ItemTag);
+            if (RemoveItemsOfTag(ItemTag, 1))
+            {
+                UE_LOG(LogTemp, Log, TEXT("Item Removed"));
+            }
+            ItemComponent->UseItem(item, ItemTag);            
+            
         }
     }
+
+    return false;
+}
+
+bool UMH_ItemManager::StopItemUse(const FGameplayTag ItemTag)
+{
+    AActor* item = nullptr;
+    bool bItemHasTag = GetItemOfTag(ItemTag, item);
+
+    if (!bItemHasTag)
+    {
+        UE_LOG(LogTemp, Log, TEXT("No Tag"));
+    }
+
+    if (item && bItemHasTag)
+    {
+        UMH_ItemComponent* ItemComponent = IsValid(item) ?
+            Cast<UMH_ItemComponent>(item->GetComponentByClass(UMH_ItemComponent::StaticClass())) : nullptr;
+
+        if (ItemComponent)
+        {
+            if (ItemComponent->ItemTagSlotType == ItemTag)
+            {
+                ItemComponent->StopUseItem(item);
+                return true;
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Log, TEXT("No ItemComponent"));
+        }
+    }
+
     return false;
 }

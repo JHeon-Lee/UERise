@@ -21,7 +21,10 @@ public:
 	UFUNCTION()
 	void ItemUpdate(AActor* UpdatedItem);
 
-	FGameplayTag GetDisplayingItemTag();
+	UFUNCTION()
+	void ConsumeItemUpdate(AActor* UpdatedItem);
+
+	const FGameplayTag GetDisplayingItemTag();
 
 	void ChangeDisplayingIndex(float InputValue);
 	void UpdateIconAndQunatity();

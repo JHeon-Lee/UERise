@@ -30,7 +30,7 @@ public:
 private:
 	void ComponentAttach();
 	void Initialize();
-	void UseItem();
+	void PlayUseItemMontage();
 	
 	UFUNCTION()
 	void GetItemNearby();
@@ -120,6 +120,10 @@ public:
 	virtual void ValutEnd() override;
 
 	virtual void RotateTick(float InitialYaw, float MaxRotateDegree, float RotateSpeed) override;
+
+	virtual void UseItemBegin() override;
+	virtual void UseItemTick() override;
+	virtual void UseItemEnd() override;
 
 // Widget Interface Override
 	virtual void SetupCharacterHPWidget(class UMHUserWidget* InUserWidget) override;

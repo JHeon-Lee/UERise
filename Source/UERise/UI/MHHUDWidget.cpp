@@ -21,9 +21,14 @@ void UMHHUDWidget::UpdateHpBar(float NewCurrentHp)
 	HpBar->UpdateHpBar(NewCurrentHp);
 }
 
-void UMHHUDWidget::UpdateItemSlotBar(AActor* NewItem)
+void UMHHUDWidget::AddItemSlotBar(AActor* NewItem)
 {
 	ItemWidget->ItemUpdate(NewItem);
+}
+
+void UMHHUDWidget::RemoveItemSlotBar(AActor* RemovedItem)
+{
+	ItemWidget->ConsumeItemUpdate(RemovedItem);
 }
 
 void UMHHUDWidget::ChangeItemSlot(float InputValue)

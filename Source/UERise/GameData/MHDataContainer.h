@@ -29,7 +29,7 @@ public:
         }
         else
         {
-            UE_LOG(LogTemp, Log, TEXT("MontageNotFound"));
+            UE_LOG(LogTemp, Log, TEXT("MontageNotFound , TagName : %s"), *Key.GetTagName().ToString());
         }
         return nullptr; 
     }

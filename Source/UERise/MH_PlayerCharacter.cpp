@@ -45,7 +45,7 @@ AMH_PlayerCharacter::AMH_PlayerCharacter(const FObjectInitializer& ObjectInitial
 	PrimaryActorTick.bCanEverTick = true;
 
 	Initialize();
-
+	
 	ComponentAttach();
 }
 
@@ -132,7 +132,7 @@ void AMH_PlayerCharacter::Initialize()
 	}
 }
 
-void AMH_PlayerCharacter::UseItem()
+void AMH_PlayerCharacter::PlayUseItemMontage()
 {
 	bool bCanUseItem = (WeaponType == EWeaponType::Unarmed) &&
 		(!GetMesh()->GetAnimInstance()->IsAnyMontagePlaying());
@@ -145,8 +145,30 @@ void AMH_PlayerCharacter::UseItem()
 	FGameplayTag ItemTag = Cast<AMHPlayerController>(GetController())->GetMainWidget()->GetDisplayingItemTag();
 	if (ItemTag.IsValid())
 	{
-		PlayAnimMontage(FIND_MONTAGE(ItemTag.GetTagName()));
-		Inventory->UseSelectedConsumble(ItemTag);
+		if (Inventory->HasEnoughItemsWithTag(ItemTag, 1))
+		{			
+			UE_LOG(LogTemp, Log, TEXT("Tag Name : %s"), *ItemTag.GetTagName().ToString());
+			UAnimMontage* Montage = FIND_MONTAGE(ItemTag.GetTagName());
+			if (Montage)
+			{
+				PlayAnimMontage(Montage);
+			}			
+		}
+		// Not Enough Item
+		else
+		{
+			bool bNoPotion = (ItemTag == FGameplayTag::RequestGameplayTag(TEXT("Item.Consumable.GreatPotion"))) ||
+						     (ItemTag == FGameplayTag::RequestGameplayTag(TEXT("Item.Consumable.Potion")));
+			  
+			if (bNoPotion)
+			{
+				UAnimMontage* Montage = FIND_MONTAGE("Character.Player.Montage.NoPotionRemain");
+				if (Montage)
+				{
+					PlayAnimMontage(Montage);
+				}
+			}
+		}
 	}
 	
 }
@@ -186,9 +208,9 @@ void AMH_PlayerCharacter::GetItemNearby()
 		float RotYaw = (UKismetMathLibrary::FindLookAtRotation(GetActorLocation(), Result.GetActor()->GetActorLocation())).Yaw ;
 		SetActorRotation(FRotator(0, RotYaw - 90.0f, 0));
 
-		if (FIND_MONTAGE(NearbyItem->ItemTagSlotType.GetTagName()))
+		if (NearbyItem->ItemGetMontage != nullptr)
 		{
-			PlayAnimMontage(FIND_MONTAGE(NearbyItem->ItemTagSlotType.GetTagName()));		
+			PlayAnimMontage(NearbyItem->ItemGetMontage);
 
 			if (!GetMesh()->GetAnimInstance()->OnPlayMontageNotifyBegin.IsBound())
 			{
@@ -821,6 +843,33 @@ void AMH_PlayerCharacter::RotateTick(float InitialYaw, float MaxRotateDegree, fl
 	}
 }
 
+void AMH_PlayerCharacter::UseItemBegin()
+{
+	FGameplayTag ItemTag = Cast<AMHPlayerController>(GetController())->GetMainWidget()->GetDisplayingItemTag();
+	if (ItemTag.IsValid())
+	{
+		if (Inventory->HasEnoughItemsWithTag(ItemTag, 1))
+		{
+			Inventory->UseSelectedConsumble(ItemTag);			
+		}
+	}
+}
+
+void AMH_PlayerCharacter::UseItemTick()
+{
+	// 인벤토리에게 전달
+
+}
+
+void AMH_PlayerCharacter::UseItemEnd()
+{
+	FGameplayTag ItemTag = Cast<AMHPlayerController>(GetController())->GetMainWidget()->GetDisplayingItemTag();
+	if (ItemTag.IsValid())
+	{
+		Inventory->StopItemUse(ItemTag);
+	}
+}
+
 void AMH_PlayerCharacter::SetupCharacterHPWidget(UMHUserWidget* InUserWidget)
 {	
 	UUtusiHPBarWidget* HpBarWidget = Cast<UUtusiHPBarWidget>(InUserWidget);	
@@ -865,7 +914,10 @@ void AMH_PlayerCharacter::SetupHUD(UMHHUDWidget* MHHUD)
 		}
 		if (Inventory)
 		{
-			Inventory->OnItemUpdated.AddDynamic(MHHUD, &UMHHUDWidget::UpdateItemSlotBar);
+			Inventory->OnItemUpdated.AddDynamic(MHHUD, &UMHHUDWidget::AddItemSlotBar);
+
+			Inventory->OnItemRemoved.AddDynamic(MHHUD, &UMHHUDWidget::RemoveItemSlotBar);
+			
 		}
 	}
 	
@@ -894,7 +946,7 @@ void AMH_PlayerCharacter::PressXOn()
 {
 	PressX = true;
 	OnXButtonTriggered.Broadcast();
-	UseItem();
+	PlayUseItemMontage();
 }
 
 void AMH_PlayerCharacter::SwitchAtkMode()

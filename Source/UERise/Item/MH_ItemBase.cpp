@@ -13,6 +13,7 @@ AMH_ItemBase::AMH_ItemBase()
 
 	ItemComponent = CreateDefaultSubobject<UMH_ItemComponent>(TEXT("ItemComponent"));
 	ItemComponent->OnItemUsed.AddDynamic(this, &AMH_ItemBase::UseItem);
+	ItemComponent->OnItemUseEnd.AddDynamic(this, &AMH_ItemBase::StopUse);
 
 	// WidgetComponent
 	ItemWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("Widget"));
@@ -39,9 +40,12 @@ void AMH_ItemBase::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, 
 	ItemWidgetComponent->SetVisibility(false);
 }
 
-void AMH_ItemBase::UseItem
-(AActor* Item, FGameplayTag ItemTag)
+void AMH_ItemBase::UseItem(AActor* Item, FGameplayTag ItemTag)
 {
 	UE_LOG(LogTemp, Log, TEXT("UseItem Called : %s"), *FString(Item->GetName()));
 
+}
+
+void AMH_ItemBase::StopUse(AActor* Item)
+{
 }

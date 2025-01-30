@@ -49,4 +49,7 @@ public:
 
 	virtual void RotateTick(float InitialYaw, float MaxRotateDegree, float RotateSpeed) = 0;
 
+	virtual void UseItemBegin() = 0;
+	virtual void UseItemTick() = 0;
+	virtual void UseItemEnd() = 0;
 };

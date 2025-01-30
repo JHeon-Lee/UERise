@@ -9,6 +9,7 @@
 
 #include "MH_ItemComponent.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemUseEnd, AActor*, User);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPickup, UMH_ItemManager*, Inventory);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemUsed, AActor*, User, FGameplayTag, GameplayTag);
 
@@ -35,6 +36,9 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
     void UseItem(AActor* User, FGameplayTag GameplayTag);
+
+    UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly)
+    void StopUseItem(AActor* User);
 
 protected:
     // Called when the game starts
@@ -70,5 +74,11 @@ public:
 
     UPROPERTY(BlueprintAssignable, EditAnywhere, Category = "Events")
     FOnItemUsed OnItemUsed;
+
+    UPROPERTY(BlueprintAssignable, EditAnywhere, Category = "Events")
+    FOnItemUseEnd OnItemUseEnd;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GetMontage")
+    TObjectPtr<class UAnimMontage> ItemGetMontage;
 		
 };

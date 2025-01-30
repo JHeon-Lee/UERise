@@ -39,6 +39,10 @@ private:
 protected:
 	UFUNCTION(BlueprintCallable)
 	virtual void UseItem(AActor* Item, FGameplayTag ItemTag) ;
+
+	UFUNCTION(BlueprintCallable)
+	virtual void StopUse(AActor* Item);
+
 	
 public:
 	bool DoOnce = false;
@@ -51,5 +55,7 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Widget")
 	TObjectPtr<class UWidgetComponent> ItemWidgetComponent;
+
+
 
 };

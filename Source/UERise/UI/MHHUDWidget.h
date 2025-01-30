@@ -28,11 +28,14 @@ public:
 	void UpdateHpBar(float NewCurrentHp);
 
 	UFUNCTION()
-	void UpdateItemSlotBar(AActor* NewItem);
+	void AddItemSlotBar(AActor* NewItem);
+
+	UFUNCTION()
+	void RemoveItemSlotBar(AActor* RemovedItem);
 
 	void ChangeItemSlot(float InputValue);
 
-	FGameplayTag GetDisplayingItemTag() {return ItemWidget->GetDisplayingItemTag(); };
+	const FGameplayTag GetDisplayingItemTag() {return ItemWidget->GetDisplayingItemTag(); };
 
 protected:
 	virtual void NativeConstruct() override;

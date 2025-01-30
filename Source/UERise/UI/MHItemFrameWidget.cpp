@@ -56,11 +56,31 @@ void UMHItemFrameWidget::ItemUpdate(AActor* UpdatedItem)
 		ConsumableArray.Add(UpdatedItem);
 		DisplayingIndex = ConsumableArray.Num()-1;
 	}
-
-
 }
 
-FGameplayTag UMHItemFrameWidget::GetDisplayingItemTag()
+void UMHItemFrameWidget::ConsumeItemUpdate(AActor* UpdatedItem)
+{
+	UE_LOG(LogTemp, Log, TEXT("ConsumeItemUpdate Called"));
+	UMH_ItemComponent* ItemComponent = UpdatedItem->FindComponentByClass<UMH_ItemComponent>();
+
+	if (IsValid(ItemComponent))
+	{		
+		// Find Item Actor in Consumable Array, Remove Stack
+		for (int32 index = 0; index < ConsumableArray.Num(); index++)
+		{
+			if (ConsumableArray[index]->GetClass() == UpdatedItem->GetClass())
+			{
+				if (index == DisplayingIndex)
+				{
+					UpdateIconAndQunatity();
+				}
+				return;
+			}
+		}
+	}
+}
+
+const FGameplayTag UMHItemFrameWidget::GetDisplayingItemTag()
 {
 	FGameplayTag Tag;
 	if (ConsumableArray.IsValidIndex(DisplayingIndex))

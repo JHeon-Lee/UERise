@@ -26,6 +26,11 @@ void AMH_ItemHoney::UseItem(AActor* Item, FGameplayTag ItemTag)
 
 }
 
+void AMH_ItemHoney::StopUse(AActor* Item)
+{
+	EndEffect();
+}
+
 void AMH_ItemHoney::ApplyEffectTick()
 {
 	UMH_PlayerStatComponent* OwnerStat = ItemOwner->FindComponentByClass<UMH_PlayerStatComponent>();
