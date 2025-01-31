@@ -130,6 +130,8 @@ void AMH_PlayerCharacter::Initialize()
 		EButtons key = static_cast<EButtons>(Enum);
 		PressMap.Add(key, false);
 	}
+
+
 }
 
 void AMH_PlayerCharacter::PlayUseItemMontage()

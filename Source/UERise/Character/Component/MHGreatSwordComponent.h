@@ -38,12 +38,23 @@ public:
 
 	virtual void TurnOnBuffEffect() override;
 
+	virtual void PostProcessEffectOn() override;
+	virtual void PostProcessEffectOff() override;
+
 	void StopCharge();
 	void StopChargeCallback();
 
 	void ComboStartA();
 	void ComboStartY(TMap<EButtons, bool> KeyInfo, EWeaponType WeaponState, bool IsWireBugEnough);
 
+	UFUNCTION()
+	void FOVUpdate(float FOVValue);
+
+	UFUNCTION()
+	void ZoomUpdate(float ZoomValue);
+
+	UFUNCTION()
+	void BlendWeightUpdate(float BlendWeightValue);
 
 	UFUNCTION()
 	void OpacityUpdate(float Opcity);
@@ -56,11 +67,15 @@ private:
 	TObjectPtr<class USkeletalMeshComponent> OwnerMesh;
 
 	UPROPERTY()
+	TObjectPtr<class APostProcessVolume> PostProcessVolumeRef;
+
+	UPROPERTY()
 	TObjectPtr<class UAnimInstance> OwnerAnimInstance;
 
 	FTimeline OpacityFloatTimeline;
-
-
+	FTimeline FOVTimeline;
+	FTimeline ZoomTimeline;
+	FTimeline BlendWeightTimeline;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Mesh)
@@ -80,6 +95,12 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<class UMaterialInstanceDynamic> OverlayMaterialDynamicInstance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ref")
+	TObjectPtr<class UMaterialInstance> PostProcessMaterialInstanceRef;
+
+	UPROPERTY()
+	TObjectPtr<class UMaterialInstanceDynamic> PostProcessMaterialDynamicInstance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Montage")
 	TMap<FName, TObjectPtr<class UAnimMontage>> ComboStartMontage;

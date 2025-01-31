@@ -30,5 +30,6 @@ public:
 
 	virtual void TurnOnBuffEffect() = 0;
 
-
+	virtual void PostProcessEffectOn() = 0;
+	virtual void PostProcessEffectOff() = 0;
 };

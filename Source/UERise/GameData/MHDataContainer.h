@@ -8,6 +8,11 @@
 #include "NiagaraSystem.h"
 #include "SlateCore/Public/Styling/SlateBrush.h"
 #include "Components/Image.h"
+#include "Sound/SoundCue.h"
+#include "Sound/SoundWave.h"
+#include "Sound/SoundBase.h"
+#include "Sound/DialogueWave.h"
+#include "Curves/CurveFloat.h"
 #include "MHDataContainer.generated.h"
 /**
  * 
@@ -52,7 +57,25 @@ public:
         return FSlateBrush();
     }
 
-    
+    UCurveFloat* GetCurveFloat(FGameplayTag Key) const
+    {
+        if (CurveFloatMap.Contains(Key))
+        {
+            return CurveFloatMap[Key];
+        }
+        return nullptr;
+    }
+
+    USoundBase* GetSoundBase(FGameplayTag Key) const
+    {
+        if (SoundBaseMap.Contains(Key))
+        {
+            return SoundBaseMap[Key];
+        }
+        return nullptr;
+    }
+
+
 public:
     // Montage Data
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
@@ -65,6 +88,12 @@ public:
     // Image Data
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Images")
     TMap<FGameplayTag, FSlateBrush> BrushMap;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curves")
+    TMap<FGameplayTag, class UCurveFloat*> CurveFloatMap;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Curves")
+    TMap<FGameplayTag, class USoundBase*> SoundBaseMap;
 
     
     UFUNCTION(BlueprintCallable, Category = "Game Data")

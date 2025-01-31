@@ -38,6 +38,9 @@ private:
 	UFUNCTION()
 	void GetItemCallBack(FName NotifyName, const FBranchingPointNotifyPayload& BranchingPointPayload);
 
+
+
+
 public:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
@@ -399,5 +402,8 @@ protected:
 
 
 	FOnWheelTriggered OnWheelTrigged;
+
 	FOnXButtonTriggered OnXButtonTriggered;
+
+
 };

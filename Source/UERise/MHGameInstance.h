@@ -45,6 +45,26 @@ public:
 		return FSlateBrush();
 	}
 
+	UCurveFloat* FindCurveFloat(FName Tag)
+	{
+		FGameplayTag GameTag = FGameplayTag::RequestGameplayTag(Tag);
+		if (GameTag.IsValid())
+		{
+			return MHDataContainerAsset->GetCurveFloat(GameTag);
+		}
+		return nullptr;
+	}
+
+	USoundBase* FindSoundBase(FName Tag)
+	{
+		FGameplayTag GameTag = FGameplayTag::RequestGameplayTag(Tag);
+		if (GameTag.IsValid())
+		{
+			return MHDataContainerAsset->GetSoundBase(GameTag);
+		}
+		return nullptr;
+	}
+
 protected:
 	UMHGameInstance();
 	UMHDataContainer* GetMHDataContainerAsset() { return MHDataContainerAsset; }		

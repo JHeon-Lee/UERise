@@ -2,15 +2,20 @@
 
 
 #include "Character/Component/MHGreatSwordComponent.h"
+#include "Camera/CameraComponent.h"
 #include "Interface/MH_WeaponComponentInterface.h"
 #include "Kismet/KismetMaterialLibrary.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/Classes/Materials/MaterialInterface.h"
 #include "GameData/MHGlobalEnum.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
 #include "MHGameInstance.h"
 #include "Particles/ParticleSystemComponent.h"
 #include "Particles/ParticleSystem.h"
+#include "Engine/PostProcessVolume.h"
 #include "GameFramework/Character.h"
+#include "GameFramework/SpringArmComponent.h"
 
 // Sets default values for this component's properties
 UMHGreatSwordComponent::UMHGreatSwordComponent()
@@ -63,9 +68,17 @@ UMHGreatSwordComponent::UMHGreatSwordComponent()
 		Gswd->SetOverlayMaterial(OverlayMaterialDynamicInstance);
 	}
 
+	static ConstructorHelpers::FObjectFinder<UMaterialInstance> PPMaterialInstance(TEXT("/Script/Engine.MaterialInstanceConstant'/Game/PostProcessMat/RadicalBlur_Inst.RadicalBlur_Inst'"));
+	if (PPMaterialInstance.Object)
+	{
+		PostProcessMaterialInstanceRef = PPMaterialInstance.Object;
+	}
+
 	FOnTimelineFloat GSwdOverlayMaterialOpacity;
 	GSwdOverlayMaterialOpacity.BindUFunction(this, FName("OpacityUpdate"));
 	OpacityFloatTimeline.AddInterpFloat(OpacityCurve, GSwdOverlayMaterialOpacity);
+
+
 }
 
 
@@ -88,6 +101,61 @@ void UMHGreatSwordComponent::BeginPlay()
 	BodyFlameEffect->SetupAttachment(OwnerMesh);
 
 	SwdFlameEffect->AttachToComponent(Gswd, FAttachmentTransformRules(EAttachmentRule::KeepRelative, false));
+
+	FOnTimelineFloat FOVTimelineFloat;
+	FOVTimelineFloat.BindUFunction(this, FName("FOVUpdate"));
+	UCurveFloat* FOVCurve = Cast<UMHGameInstance>(GetWorld()->GetGameInstance())->FindCurveFloat("GameData.Curve.GSwdFOV");
+	if (FOVCurve)
+	{
+		FOVTimeline.AddInterpFloat(FOVCurve, FOVTimelineFloat);
+	}
+
+	FOnTimelineFloat ZoomTimelineFloat;
+	ZoomTimelineFloat.BindUFunction(this, FName("ZoomUpdate"));
+	UCurveFloat* ZoomCurve = Cast<UMHGameInstance>(GetWorld()->GetGameInstance())->FindCurveFloat("GameData.Curve.GSwdZoom");
+	if (ZoomCurve)
+	{
+		ZoomTimeline.AddInterpFloat(ZoomCurve, ZoomTimelineFloat);
+	}
+
+	FOnTimelineFloat BlendWeightTimelineFloat;
+	BlendWeightTimelineFloat.BindUFunction(this, FName("BlendWeightUpdate"));
+	UCurveFloat* BlendWeightCurve = Cast<UMHGameInstance>(GetWorld()->GetGameInstance())->FindCurveFloat("GameData.Curve.GSwdBlendWeight");
+	if (BlendWeightCurve)
+	{
+		BlendWeightTimeline.AddInterpFloat(BlendWeightCurve, BlendWeightTimelineFloat);
+	}
+
+	// Find PostProcess Ref 
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), APostProcessVolume::StaticClass(), FoundActors);
+
+	for (AActor* Actor : FoundActors)
+	{
+		APostProcessVolume* PPVolume = Cast<APostProcessVolume>(Actor);
+		if (PPVolume && PPVolume->bUnbound)
+		{			
+			if (PPVolume->Settings.WeightedBlendables.Array.Num() <= 0)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Found Unbound PostProcessVolume, But WeightedBlendables Array Not Exist"));
+				break;
+			}
+
+			if (!PostProcessMaterialInstanceRef)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("PostProcessMaterialInstanceRef is NULL"));
+				break;
+			}
+
+			PostProcessMaterialDynamicInstance = UKismetMaterialLibrary::CreateDynamicMaterialInstance(GetWorld(), PostProcessMaterialInstanceRef);
+			//PostProcessMaterialDynamicInstance->SetScalarParameterValue(TEXT("Alpha"), 0.0);
+			// Apply Setting to PostProcessVolume
+			PPVolume->Settings.WeightedBlendables.Array[0].Object = PostProcessMaterialDynamicInstance;		
+
+			PostProcessVolumeRef = PPVolume;			
+			PostProcessVolumeRef->Settings.WeightedBlendables.Array[0].Weight = 0.0;
+		}
+	}
 }
 
 void UMHGreatSwordComponent::Deactivate()
@@ -111,6 +179,9 @@ void UMHGreatSwordComponent::TickComponent(float DeltaTime, ELevelTick TickType,
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 	
 	OpacityFloatTimeline.TickTimeline(DeltaTime);
+	FOVTimeline.TickTimeline(DeltaTime);
+	ZoomTimeline.TickTimeline(DeltaTime);
+	BlendWeightTimeline.TickTimeline(DeltaTime);
 }
 
 void UMHGreatSwordComponent::SwdAttachToSocket(FName socketName)
@@ -173,6 +244,29 @@ void UMHGreatSwordComponent::TurnOnBuffEffect()
 
 }
 
+void UMHGreatSwordComponent::PostProcessEffectOn()
+{
+	if (PostProcessVolumeRef)
+	{
+		PostProcessVolumeRef->Settings.WeightedBlendables.Array[0].Weight = 1.0f;
+		FOVTimeline.Play();
+		ZoomTimeline.Play();
+		BlendWeightTimeline.Play();
+	}
+}
+
+void UMHGreatSwordComponent::PostProcessEffectOff()
+{	
+	if (PostProcessVolumeRef)
+	{
+		PostProcessVolumeRef->Settings.WeightedBlendables.Array[0].Weight = 0.0f;
+		FOVTimeline.Reverse();
+		ZoomTimeline.Reverse();
+		BlendWeightTimeline.Reverse();
+	}
+
+}
+
 void UMHGreatSwordComponent::StopCharge()
 {
 	FTimerHandle TimeHandle;
@@ -217,3 +311,31 @@ void UMHGreatSwordComponent::ComboStartY(TMap<EButtons, bool> KeyInfo, EWeaponTy
 
 	}
 }
+
+
+void UMHGreatSwordComponent::FOVUpdate(float FOVValue)
+{	
+	UCameraComponent* OwnerCamera = GetOwner()->FindComponentByClass<UCameraComponent>();
+	if (OwnerCamera)
+	{
+		OwnerCamera->SetFieldOfView(FOVValue);
+	}
+}
+
+void UMHGreatSwordComponent::ZoomUpdate(float ZoomValue)
+{
+	USpringArmComponent* OwnerSpringArm = GetOwner()->FindComponentByClass<USpringArmComponent>();
+	if (OwnerSpringArm)
+	{
+		OwnerSpringArm->TargetArmLength = ZoomValue;
+	}
+}
+
+void UMHGreatSwordComponent::BlendWeightUpdate(float BlendWeightValue)
+{
+	if (PostProcessMaterialDynamicInstance)
+	{
+		PostProcessMaterialDynamicInstance->SetScalarParameterValue(TEXT("Alpha"), BlendWeightValue);
+	}
+}
+

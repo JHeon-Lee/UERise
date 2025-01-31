@@ -3,6 +3,7 @@
 
 #include "UI/MHItemFrameWidget.h"
 #include "MHGameInstance.h"
+#include "Kismet/GameplayStatics.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Item/MH_ItemComponent.h"
@@ -77,12 +78,11 @@ void UMHItemFrameWidget::ConsumeItemUpdate(AActor* UpdatedItem)
 				return;
 			}
 		}
-	}
+	} 
 }
 
 const FGameplayTag UMHItemFrameWidget::GetDisplayingItemTag()
 {
-	FGameplayTag Tag;
 	if (ConsumableArray.IsValidIndex(DisplayingIndex))
 	{
 		UMH_ItemComponent* ItemComponent = ConsumableArray[DisplayingIndex]->FindComponentByClass<UMH_ItemComponent>();
@@ -92,7 +92,7 @@ const FGameplayTag UMHItemFrameWidget::GetDisplayingItemTag()
 		}
 	}
 
-	return FGameplayTag();
+	return FGameplayTag::EmptyTag;
 }
 
 void UMHItemFrameWidget::ChangeDisplayingIndex(float InputValue)
@@ -102,6 +102,7 @@ void UMHItemFrameWidget::ChangeDisplayingIndex(float InputValue)
 		return;
 	}
 
+	int32 CurIndex = DisplayingIndex;
 	if (InputValue > 0)
 	{
 		DisplayingIndex++;
@@ -109,6 +110,7 @@ void UMHItemFrameWidget::ChangeDisplayingIndex(float InputValue)
 		if (DisplayingIndex >= ConsumableArray.Num())
 		{
 			DisplayingIndex -= ConsumableArray.Num();
+
 		}		
 	}
 	else if (InputValue < 0)
@@ -118,6 +120,16 @@ void UMHItemFrameWidget::ChangeDisplayingIndex(float InputValue)
 		if (DisplayingIndex <= -1)
 		{
 			DisplayingIndex += ConsumableArray.Num();
+
+		}
+	}
+
+	if (DisplayingIndex != CurIndex)
+	{
+		USoundBase* SwitchSound = Cast<UMHGameInstance>(GetWorld()->GetGameInstance())->FindSoundBase(TEXT("GameData.Sound.ItemSlotChange"));
+		if (SwitchSound)
+		{
+			UGameplayStatics::PlaySound2D(GetWorld(), SwitchSound);
 		}
 	}
 
