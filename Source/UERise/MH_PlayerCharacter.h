@@ -44,6 +44,7 @@ private:
 public:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
+	virtual void PossessedBy(AController* NewController) override;
 
 public:
 	void URotate(const FInputActionValue& Value);
