@@ -3,6 +3,7 @@
 
 #include "Player/MHPlayerController.h"
 #include "UI/MHHUDWidget.h"
+#include "GameData/MHMacros.h"
 
 AMHPlayerController::AMHPlayerController()
 {
@@ -33,4 +34,42 @@ void AMHPlayerController::BeginPlay()
 		MHHUDWidget->AddToViewport();
 	}
 
+}
+
+void AMHPlayerController::PostInitializeComponents()
+{
+	MH_LOG(TEXT("%s"), TEXT("Begin"));
+	Super::PostInitializeComponents();
+	MH_LOG(TEXT("%s"), TEXT("End"));
+
+}
+
+void AMHPlayerController::PostNetInit()
+{
+	MH_LOG(TEXT("%s"), TEXT("Begin"));
+
+	Super::PostNetInit();
+
+	UNetDriver* NetDriver = GetNetDriver();
+	if (NetDriver)
+	{
+		if (NetDriver->ServerConnection)
+		{
+			MH_LOG(TEXT("Server Connection: %s"), *NetDriver->ServerConnection->GetName());
+		}
+	}
+	else
+	{
+		MH_LOG(TEXT("%s"), TEXT("No NetDriver"));
+	}
+	MH_LOG(TEXT("%s"), TEXT("End"));
+}
+
+void AMHPlayerController::OnPossess(APawn* InPawn)
+{
+	MH_LOG(TEXT("%s"), TEXT("Begin"));
+
+	Super::OnPossess(InPawn);
+
+	MH_LOG(TEXT("%s"), TEXT("End"));
 }
